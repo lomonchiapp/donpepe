@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { buttonVariants } from "@/components/ui/button";
 import { BadgeEstado } from "@/components/empeno/badge-estado";
 import { AccionesPago } from "@/components/empeno/acciones-pago";
+import { BotonEliminarEmpeno } from "@/components/empeno/boton-eliminar";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import {
@@ -115,6 +116,11 @@ export default async function EmpenoDetallePage({
           >
             <Printer className="h-4 w-4" /> Imprimir recibo
           </Link>
+          <BotonEliminarEmpeno
+            prestamo_id={prest.id}
+            codigo={prest.codigo}
+            totalPagos={pagos.length}
+          />
         </div>
       </FadeIn>
 

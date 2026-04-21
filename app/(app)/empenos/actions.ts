@@ -463,6 +463,146 @@ export async function registrarPago(formData: FormData) {
 }
 
 /**
+ * Elimina un empeño completo: préstamo + pagos + recibos + artículo.
+ *
+ * Orden forzado por las FKs con `on delete restrict`:
+ *   1. recibos (referencia pagos)
+ *   2. pagos (referencia prestamo)
+ *   3. prestamos
+ *   4. articulos (opcional, best-effort — puede estar referenciado por
+ *      ventas, factura_items o piezas_joyeria si el ciclo del artículo
+ *      continuó más allá del empeño).
+ *
+ * Guardas:
+ *  - Si algún pago tiene una `factura` emitida (no recibo, factura fiscal),
+ *    abortamos: el recibo no fiscal se puede borrar pero una factura DGII
+ *    es inmutable y requiere nota de crédito.
+ *  - RLS: `recibos` exige `es_dueno()` para eliminar; si el usuario es
+ *    empleado el delete no borra nada y el siguiente paso falla. En ese
+ *    caso devolvemos un mensaje claro.
+ */
+const EliminarEmpenoSchema = z.object({
+  prestamo_id: z.uuid(),
+});
+
+export async function eliminarEmpeno(input: { prestamo_id: string }) {
+  const parsed = EliminarEmpenoSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues.map((i) => i.message).join(", "),
+    };
+  }
+  const { prestamo_id } = parsed.data;
+
+  const supabase = await createClient();
+
+  // 1. Traer el préstamo para conocer su artículo y código.
+  const { data: prestamoData, error: errPrest } = await supabase
+    .from("prestamos")
+    .select("id, articulo_id, codigo")
+    .eq("id", prestamo_id)
+    .maybeSingle();
+
+  if (errPrest) return { error: errPrest.message };
+  if (!prestamoData) return { error: "Préstamo no encontrado" };
+
+  const prestamo = prestamoData as Pick<
+    Prestamo,
+    "id" | "articulo_id" | "codigo"
+  >;
+
+  // 2. Pagos del préstamo.
+  const { data: pagosData, error: errPagosSel } = await supabase
+    .from("pagos")
+    .select("id")
+    .eq("prestamo_id", prestamo_id);
+  if (errPagosSel) return { error: errPagosSel.message };
+
+  const pagoIds = ((pagosData ?? []) as { id: string }[]).map((p) => p.id);
+
+  // 3. Si cualquier pago quedó ligado a una factura fiscal, no tocamos nada.
+  if (pagoIds.length > 0) {
+    const { data: facturasData, error: errFact } = await supabase
+      .from("facturas")
+      .select("id, ncf, codigo_interno")
+      .in("pago_id", pagoIds)
+      .limit(1);
+    if (errFact) return { error: errFact.message };
+    if (facturasData && facturasData.length > 0) {
+      const f = facturasData[0] as {
+        ncf: string | null;
+        codigo_interno: string;
+      };
+      return {
+        error: `No se puede eliminar el empeño ${prestamo.codigo}: tiene una factura emitida (${f.ncf ?? f.codigo_interno}). Anúlala primero desde /facturas.`,
+      };
+    }
+
+    // 4. Borrar recibos de esos pagos (RLS: requiere `dueno`).
+    const { data: recibosBorrados, error: errRec } = await supabase
+      .from("recibos")
+      .delete()
+      .in("pago_id", pagoIds)
+      .select("id");
+    if (errRec) {
+      return { error: `No se pudieron eliminar los recibos: ${errRec.message}` };
+    }
+
+    // Verificar que no quedaron recibos huérfanos (RLS silenciosa).
+    const { count: recibosRestantes } = await supabase
+      .from("recibos")
+      .select("id", { count: "exact", head: true })
+      .in("pago_id", pagoIds);
+    if ((recibosRestantes ?? 0) > 0) {
+      return {
+        error:
+          "No tienes permisos para eliminar los recibos asociados. Pídele al dueño que elimine este empeño.",
+      };
+    }
+    // `recibosBorrados` queda disponible por si se quiere loguear.
+    void recibosBorrados;
+
+    // 5. Borrar pagos.
+    const { error: errPagoDel } = await supabase
+      .from("pagos")
+      .delete()
+      .eq("prestamo_id", prestamo_id);
+    if (errPagoDel) {
+      return { error: `No se pudieron eliminar los pagos: ${errPagoDel.message}` };
+    }
+  }
+
+  // 6. Borrar el préstamo.
+  const { error: errPrestDel } = await supabase
+    .from("prestamos")
+    .delete()
+    .eq("id", prestamo_id);
+  if (errPrestDel) {
+    return { error: `No se pudo eliminar el préstamo: ${errPrestDel.message}` };
+  }
+
+  // 7. Borrar el artículo — best effort. Si está referenciado por una
+  //    venta o por factura_items (cliente histórico) lo dejamos; `on delete
+  //    set null` en esas tablas lo haría igual pero para mantener el
+  //    historial preferimos solo borrar cuando el artículo era exclusivo
+  //    del empeño. Si falla por FK (p. ej. `piezas_joyeria` via
+  //    `origen_ref`), ignoramos — lo importante es que el empeño ya no existe.
+  if (prestamo.articulo_id) {
+    await supabase
+      .from("articulos")
+      .delete()
+      .eq("id", prestamo.articulo_id);
+  }
+
+  revalidatePath("/empenos");
+  revalidatePath("/pagos");
+  revalidatePath("/recibos");
+  revalidatePath("/");
+
+  redirect("/empenos");
+}
+
+/**
  * Calcula la deuda actual de un préstamo considerando todos sus pagos.
  * Útil para la vista de detalle.
  */

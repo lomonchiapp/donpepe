@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Don Pepe
 
-## Getting Started
+Sistema de compraventa dominicana: préstamos prendarios (empeño), compra y venta de oro, y gestión de inventario.
 
-First, run the development server:
+Diseñado **mobile-first** para dueños de compraventas que no son muy tecnológicos. Wizard guiado de 3 pasos para crear un empeño, cálculo automático de intereses, alertas WhatsApp al dueño, e inventario automático cuando los artículos pasan a propiedad de la casa.
+
+## Stack
+
+- **Next.js 16** (App Router · Turbopack · Server Actions)
+- **React 19.2** con Motion para animaciones
+- **Tailwind v4** + **shadcn/ui** (estilo base-nova)
+- **Supabase** (Postgres · Auth · Storage · RLS)
+- **WhatsApp Cloud API** (Meta) — alertas al dueño
+- **Vercel** — hosting + Cron Jobs
+- **Tests**: `node:test` + `tsx` (sin Vitest)
+
+## Primera vez
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.local.example .env.local
+# Edita .env.local con las credenciales de Supabase y WhatsApp
+
+npm install
+npm run dev         # arranca en http://localhost:3000
+
+# Ejecutar las migraciones en Supabase (Dashboard → SQL Editor):
+#   supabase/migrations/001_schema.sql
+#   supabase/migrations/002_rls.sql
+#   supabase/migrations/003_seed.sql   (solo dev)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Comando             | Descripción                                   |
+| ------------------- | --------------------------------------------- |
+| `npm run dev`       | Dev server con Turbopack                      |
+| `npm run build`     | Build de producción                           |
+| `npm run test`      | Tests unitarios (cédula, intereses, oro)      |
+| `npm run typecheck` | Verifica tipos TypeScript                     |
+| `npm run lint`      | ESLint                                        |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Estructura
 
-## Learn More
+```
+app/
+  (auth)/login/         Login con magic link
+  (app)/                Rutas protegidas con layout + sidebar/bottom nav
+    empenos/            Lista · wizard · detalle · pagos
+    clientes/
+    oro/                Precios del día + compra directa
+    inventario/         Artículos propiedad de la casa
+    ventas/
+    alertas/            Vencimientos y contacto WhatsApp del cliente
+    reportes/
+    config/
+  api/
+    cron/vencimientos   Cron diario
+    webhooks/whatsapp   Verificación + eventos Meta
+  print/recibo/[id]     Vista imprimible del ticket
+components/
+  empeno/ cliente/ oro/ ventas/ layout/ motion/ ui/
+lib/
+  calc/                 Intereses y tasación de oro
+  validaciones/         Cédula JCE
+  supabase/             Clientes server / browser
+  whatsapp/             Envío por plantillas HSM
+  format/               DOP, fechas es-DO
+supabase/migrations/    SQL: schema · RLS · seed
+tests/unit/             Tests puros
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Lógica de negocio dominicana (referencia)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Préstamo**: 50-70% del valor tasado (configurable en `/config`).
+- **Interés**: 10-15% mensual típico. Se cobra al renovar o saldar.
+- **Plazo**: 3-6 meses. Renovable.
+- **Vencimiento**: al no pagar ni renovar, el artículo pasa a `vencido_a_cobro` y luego (tras días de gracia) a `propiedad_casa` y aparece en inventario.
+- **Oro**: se tasa por kilataje (10/14/18/22/24K) × peso × precio DOP/gramo del día.
+- **Marco legal**: Ley 387 de 1932.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Producción (Vercel)
 
-## Deploy on Vercel
+- El cron `/api/cron/vencimientos` corre todos los días a las 12:00 UTC (8 AM RD) — ver `vercel.json`.
+- WhatsApp requiere plantillas HSM aprobadas (Meta Business Manager):
+  - `don_pepe_resumen_diario`
+  - `don_pepe_vencimiento_hoy`
+  - `don_pepe_articulos_propiedad`
+- Para que el dueño reciba alertas debe tener `recibir_alertas = true` y `telefono_whatsapp` en la tabla `app_users`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Identidad visual
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Paleta "cálida dominicana + dorado" (OKLCH en `app/globals.css`):
+
+- Primary (vino): `#7C1D1D`
+- Accent (oro): `#D4AF37`
+- Secondary (crema): `#F5E6C8`
+- Dark (café oscuro): `#1A0F0A`
+- Success (verde): `#2D6A4F`
+- Danger (rojo bandera): `#C1272D`
+# donpepe

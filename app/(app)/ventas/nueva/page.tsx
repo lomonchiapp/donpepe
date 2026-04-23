@@ -27,8 +27,13 @@ export default async function NuevaVentaPage({ searchParams }: Props) {
   if (!data) notFound();
   const articulo = data as Articulo;
 
-  // Precio sugerido: valor tasado + 40% de margen (práctica común en compraventas)
-  const precioSugerido = Math.round(Number(articulo.valor_tasado) * 1.4);
+  // Precio sugerido: si hay valor tasado histórico, lo usamos + 40% de margen
+  // (práctica común). Para artículos nuevos sin tasado, el operador lo define
+  // manualmente en el formulario — mejor cero que una cifra inventada.
+  const precioSugerido =
+    articulo.valor_tasado != null
+      ? Math.round(Number(articulo.valor_tasado) * 1.4)
+      : 0;
 
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-6 md:py-8">

@@ -41,25 +41,54 @@ export function FlujoCompraOro({ cliente_preseleccionado, precios_oro }: Props) 
   const [cliente, setCliente] = useState<Cliente | null>(cliente_preseleccionado ?? null);
   const [kilataje, setKilataje] = useState<Kilataje>(18);
   const [peso, setPeso] = useState<number>(0);
-  // `totalOverride` guarda el precio negociado cuando el operador lo edita a
-  // mano (regateo con el cliente). Si es `null`, usamos `totalSugerido`. Así
-  // evitamos sincronizar con useEffect y el total sigue al kilataje/peso sin
-  // parpadeos cuando no se está negociando.
+  // Precio del día (registrado en `precios_oro`). Puede ser null.
+  const precioGramoRegistrado = precios_oro[kilataje] ?? null;
+  // Override manual del precio por gramo (renegociación in situ o cuando no
+  // hay precio del día). Si es null, se usa el registrado.
+  const [precioGramoOverride, setPrecioGramoOverride] = useState<number | null>(null);
+  // Override del total — sigue existiendo para cuando el operador prefiere
+  // teclear el monto final directamente en lugar de precio/g × peso.
   const [totalOverride, setTotalOverride] = useState<number | null>(null);
   const [notas, setNotas] = useState("");
   const [pending, startTransition] = useTransition();
 
-  const precioGramo = precios_oro[kilataje] ?? null;
-  const totalSugerido = useMemo(() => {
-    if (!precioGramo || peso <= 0) return 0;
-    return tasarOro({ kilataje, peso_gramos: peso, precio_dop_gramo: precioGramo })
-      .precio_final;
-  }, [kilataje, peso, precioGramo]);
+  // Precio/g efectivo = override manual > precio registrado > null
+  const precioGramoEfectivo =
+    precioGramoOverride !== null ? precioGramoOverride : precioGramoRegistrado;
 
-  const negociado = totalOverride !== null;
-  const total = totalOverride ?? totalSugerido;
+  const totalSugerido = useMemo(() => {
+    if (!precioGramoEfectivo || peso <= 0) return 0;
+    return tasarOro({
+      kilataje,
+      peso_gramos: peso,
+      precio_dop_gramo: precioGramoEfectivo,
+    }).precio_final;
+  }, [kilataje, peso, precioGramoEfectivo]);
+
+  const precioNegociado = precioGramoOverride !== null;
+  const totalNegociado = totalOverride !== null;
+  const negociado = precioNegociado || totalNegociado;
+
+  const total = totalOverride !== null ? totalOverride : totalSugerido;
+
+  // Precio/g efectivo FINAL que se va a persistir: si el usuario editó el
+  // total directamente, derivamos el precio/g de total/peso para mantener
+  // consistencia.
+  const precioGramoFinal = useMemo(() => {
+    if (peso <= 0 || total <= 0) return precioGramoEfectivo ?? 0;
+    return total / peso;
+  }, [total, peso, precioGramoEfectivo]);
 
   function restaurarSugerido() {
+    setTotalOverride(null);
+    setPrecioGramoOverride(null);
+  }
+
+  function onEditarPrecioGramo(valor: number) {
+    setPrecioGramoOverride(Number.isFinite(valor) && valor >= 0 ? valor : 0);
+    // Al cambiar precio/g, descartamos override de total para recalcular con
+    // el nuevo rate. Si el usuario quiere luego ajustar también el total,
+    // puede hacerlo explícitamente.
     setTotalOverride(null);
   }
 
@@ -69,7 +98,7 @@ export function FlujoCompraOro({ cliente_preseleccionado, precios_oro }: Props) 
     setTotalOverride(Number.isFinite(valor) ? valor : 0);
   }
 
-  const diferencia = total - totalSugerido;
+  const diferencia = totalNegociado ? total - totalSugerido : 0;
   const porcentajeDif =
     totalSugerido > 0 ? (diferencia / totalSugerido) * 100 : 0;
 
@@ -78,28 +107,34 @@ export function FlujoCompraOro({ cliente_preseleccionado, precios_oro }: Props) 
       toast.error("Selecciona un cliente");
       return;
     }
-    if (paso === 1 && (peso <= 0 || !precioGramo)) {
-      toast.error("Ingresa peso y asegúrate de tener precio del día");
-      return;
-    }
-    if (paso === 1 && total <= 0) {
-      toast.error("Total inválido");
-      return;
+    if (paso === 1) {
+      if (peso <= 0) {
+        toast.error("Ingresa el peso en gramos");
+        return;
+      }
+      if (total <= 0) {
+        toast.error("Ingresa un precio por gramo o un total a pagar");
+        return;
+      }
     }
     setPaso((p) => p + 1);
   }
 
   async function confirmar() {
-    if (!cliente || !precioGramo) return;
+    if (!cliente) return;
     if (total <= 0) {
       toast.error("Total inválido");
+      return;
+    }
+    if (precioGramoFinal <= 0) {
+      toast.error("Precio por gramo inválido");
       return;
     }
     const fd = new FormData();
     fd.set("cliente_id", cliente.id);
     fd.set("kilataje", String(kilataje));
     fd.set("peso_gramos", String(peso));
-    fd.set("precio_gramo", String(precioGramo));
+    fd.set("precio_gramo", String(precioGramoFinal));
     fd.set("total_pagado", String(total));
     if (notas) fd.set("notas", notas);
 
@@ -168,6 +203,56 @@ export function FlujoCompraOro({ cliente_preseleccionado, precios_oro }: Props) 
               </div>
             </div>
 
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="precio-gramo" className="text-xs">
+                  Precio por gramo (RD$)
+                </Label>
+                {precioNegociado && precioGramoRegistrado && (
+                  <button
+                    type="button"
+                    onClick={() => setPrecioGramoOverride(null)}
+                    className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Restaurar precio del día
+                  </button>
+                )}
+              </div>
+              <Input
+                id="precio-gramo"
+                type="number"
+                inputMode="decimal"
+                step="1"
+                min="0"
+                value={precioGramoEfectivo ?? ""}
+                onChange={(e) => onEditarPrecioGramo(Number(e.target.value))}
+                onFocus={(e) => e.currentTarget.select()}
+                placeholder={
+                  precioGramoRegistrado
+                    ? formatearDOP(precioGramoRegistrado)
+                    : `Ingresa el precio por gramo de ${kilataje}K`
+                }
+                className="h-12 text-lg font-semibold tabular-nums"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {precioGramoRegistrado ? (
+                  <>
+                    Precio del día {kilataje}K:{" "}
+                    <span className="font-semibold">
+                      {formatearDOP(precioGramoRegistrado)}
+                    </span>
+                    {precioNegociado && " · Estás usando un precio distinto"}
+                  </>
+                ) : (
+                  <>
+                    Sin precio del día registrado para {kilataje}K — teclea el
+                    precio acordado con el cliente.
+                  </>
+                )}
+              </p>
+            </div>
+
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -184,9 +269,8 @@ export function FlujoCompraOro({ cliente_preseleccionado, precios_oro }: Props) 
                 )}
               </div>
 
-              {/* Input editable: grande, tabular, centrado; estilo de display
-                  pero tocable en tablet. Mostramos "RD$" fijo a la izquierda
-                  y un input bare-bones para la cantidad. */}
+              {/* Input editable: grande, tabular, centrado. Sin disable —
+                  siempre permitimos teclear el total. */}
               <label
                 htmlFor="oro-total"
                 className="mt-1 flex cursor-text items-baseline justify-center gap-1"
@@ -198,18 +282,19 @@ export function FlujoCompraOro({ cliente_preseleccionado, precios_oro }: Props) 
                   inputMode="decimal"
                   step="1"
                   min={0}
-                  disabled={!precioGramo || peso <= 0}
                   value={total || ""}
                   onChange={(e) => onEditarTotal(Number(e.target.value))}
                   onFocus={(e) => e.currentTarget.select()}
                   placeholder="0"
                   aria-label="Monto a pagar por el oro"
-                  className="w-[min(100%,14ch)] bg-transparent text-center text-4xl font-bold tabular-nums tracking-tight text-gold-foreground caret-gold-foreground outline-none placeholder:opacity-40 focus-visible:ring-2 focus-visible:ring-gold-foreground/40 rounded-md disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-[min(100%,14ch)] bg-transparent text-center text-4xl font-bold tabular-nums tracking-tight text-gold-foreground caret-gold-foreground outline-none placeholder:opacity-40 focus-visible:ring-2 focus-visible:ring-gold-foreground/40 rounded-md"
                 />
               </label>
 
               <p className="mt-1 text-xs opacity-80">
-                {precioGramo ? formatearDOP(precioGramo) : "—"}/g × {peso || 0}g
+                {precioGramoEfectivo
+                  ? formatearDOP(precioGramoEfectivo)
+                  : "—"}/g × {peso || 0}g
                 {totalSugerido > 0 && (
                   <>
                     {" "}= <span className="font-semibold">{formatearDOP(totalSugerido)}</span>
@@ -217,7 +302,7 @@ export function FlujoCompraOro({ cliente_preseleccionado, precios_oro }: Props) 
                 )}
               </p>
 
-              {negociado && totalSugerido > 0 && (
+              {totalNegociado && totalSugerido > 0 && (
                 <div className="mt-3 flex items-center justify-center gap-2 text-[11px]">
                   <span
                     className={cn(
@@ -245,16 +330,10 @@ export function FlujoCompraOro({ cliente_preseleccionado, precios_oro }: Props) 
             </motion.div>
 
             <p className="text-center text-xs text-muted-foreground">
-              Toca el monto para negociar un precio distinto al sugerido. El
-              cambio es temporal y sólo afecta esta compra.
+              Puedes editar el <strong>precio por gramo</strong> o el{" "}
+              <strong>total a pagar</strong> — lo que sea más cómodo para la
+              negociación. El cambio solo afecta esta compra.
             </p>
-
-            {!precioGramo && (
-              <p className="text-center text-sm text-destructive">
-                ⚠️ No hay precio registrado para {kilataje}K. Regístralo en la
-                pantalla de Oro primero.
-              </p>
-            )}
           </motion.div>
         )}
 
@@ -281,11 +360,26 @@ export function FlujoCompraOro({ cliente_preseleccionado, precios_oro }: Props) 
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Precio/g hoy</span>
-                  <span className="font-semibold">
-                    {precioGramo ? formatearDOP(precioGramo) : "—"}
+                  <span className="text-muted-foreground">
+                    Precio/g usado
+                  </span>
+                  <span className="font-semibold tabular-nums">
+                    {formatearDOP(precioGramoFinal)}
+                    {precioNegociado && (
+                      <span className="ml-1 text-[10px] font-medium uppercase text-primary">
+                        · neg.
+                      </span>
+                    )}
                   </span>
                 </div>
+                {precioGramoRegistrado && (
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Precio del día</span>
+                    <span className="tabular-nums">
+                      {formatearDOP(precioGramoRegistrado)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Sugerido</span>
                   <span className="font-semibold tabular-nums">
@@ -374,4 +468,3 @@ export function FlujoCompraOro({ cliente_preseleccionado, precios_oro }: Props) 
     </div>
   );
 }
-

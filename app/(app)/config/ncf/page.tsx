@@ -1,27 +1,32 @@
-import { FileStack } from "lucide-react";
+import { AlertTriangle, FileStack } from "lucide-react";
 
 import { FadeIn } from "@/components/motion/fade-in";
 import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { formatearFechaCorta } from "@/lib/format";
+import { TIPO_COMPROBANTE_META } from "@/lib/facturacion/tipos-comprobante";
 import type { NcfRango } from "@/lib/supabase/types";
 
 import { Section } from "../section";
+import { BotonMarcarVencidos } from "../numeraciones/boton-marcar-vencidos";
 import { FormCargarRango } from "./form-cargar-rango";
 import { RangoAcciones } from "./rango-acciones";
 
 export const metadata = { title: "Rangos NCF — Configuración" };
 
-const LABEL_TIPO = {
-  factura_credito_fiscal: "Crédito fiscal (01)",
-  factura_consumo: "Consumo (02)",
-  nota_debito: "Nota débito (03)",
-  nota_credito: "Nota crédito (04)",
-  compra: "Compra al público (11)",
-  regimen_especial: "Régimen especial (14)",
-  gubernamental: "Gubernamental (15)",
-} as const;
+const UMBRAL_DIAS_ALERTA = 30;
+const UMBRAL_PCT_ALERTA = 80;
+
+function diasHasta(fecha: string | null): number | null {
+  if (!fecha) return null;
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const objetivo = new Date(fecha + "T00:00:00");
+  return Math.floor(
+    (objetivo.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24),
+  );
+}
 
 const TONO_ESTADO = {
   activo: "bg-success/15 text-success",
@@ -38,8 +43,66 @@ export default async function ConfigNcfPage() {
     .order("created_at", { ascending: false });
   const rangos = (data ?? []) as NcfRango[];
 
+  // Alertas: rangos activos con <30 días para vencer o ≥80% consumidos.
+  const alertas = rangos.filter((r) => {
+    if (r.estado !== "activo") return false;
+    const dias = diasHasta(r.fecha_vencimiento);
+    if (dias !== null && dias <= UMBRAL_DIAS_ALERTA) return true;
+    const total = r.secuencia_hasta - r.secuencia_desde + 1;
+    const usados = r.secuencia_actual - r.secuencia_desde;
+    const pct = total > 0 ? (usados / total) * 100 : 0;
+    return pct >= UMBRAL_PCT_ALERTA;
+  });
+
   return (
     <div className="space-y-6">
+      {alertas.length > 0 && (
+        <FadeIn>
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="flex items-start gap-3 p-4">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+              <div className="min-w-0 flex-1 space-y-1">
+                <p className="text-sm font-semibold text-destructive">
+                  {alertas.length === 1
+                    ? "1 rango requiere atención"
+                    : `${alertas.length} rangos requieren atención`}
+                </p>
+                <ul className="space-y-0.5 text-xs text-destructive/90">
+                  {alertas.map((r) => {
+                    const dias = diasHasta(r.fecha_vencimiento);
+                    const total = r.secuencia_hasta - r.secuencia_desde + 1;
+                    const usados = r.secuencia_actual - r.secuencia_desde;
+                    const pct = total > 0 ? Math.round((usados / total) * 100) : 0;
+                    return (
+                      <li key={r.id}>
+                        <span className="font-medium">
+                          {TIPO_COMPROBANTE_META[r.tipo_comprobante].label}
+                        </span>{" "}
+                        · serie {r.serie} · {pct}% usado
+                        {dias !== null && (
+                          <>
+                            {" · "}
+                            {dias < 0
+                              ? `vencido hace ${Math.abs(dias)}d`
+                              : dias === 0
+                              ? "vence hoy"
+                              : `vence en ${dias}d`}
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </FadeIn>
+      )}
+
+      <div className="flex justify-end">
+        <BotonMarcarVencidos />
+      </div>
+
       <Section
         icon={<FileStack className="h-5 w-5" />}
         titulo="Cargar nuevo rango NCF"
@@ -82,7 +145,7 @@ export default async function ConfigNcfPage() {
                           {r.estado}
                         </span>
                         <span className="text-xs font-medium">
-                          {LABEL_TIPO[r.tipo_comprobante]}
+                          {TIPO_COMPROBANTE_META[r.tipo_comprobante].label}
                         </span>
                         <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
                           serie {r.serie}

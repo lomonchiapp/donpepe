@@ -77,7 +77,9 @@ export default async function ReciboPage({
             {p.articulos.kilataje}K · {p.articulos.peso_gramos}g
           </p>
         )}
-        <Line l="Tasado en" v={formatearDOP(Number(p.articulos?.valor_tasado ?? 0))} />
+        {p.articulos?.valor_tasado != null && (
+          <Line l="Tasado en" v={formatearDOP(Number(p.articulos.valor_tasado))} />
+        )}
       </div>
 
       <div className="my-3 border-t border-dashed border-black/40" />

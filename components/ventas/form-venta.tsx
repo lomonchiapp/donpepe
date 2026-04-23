@@ -67,7 +67,9 @@ export function FormVenta({ articulo, precio_sugerido }: Props) {
         <CardContent className="py-4 text-sm space-y-1">
           <p className="font-semibold">{articulo.descripcion}</p>
           <p className="text-xs text-muted-foreground">
-            Tasado en {formatearDOP(Number(articulo.valor_tasado))}
+            {articulo.valor_tasado != null
+              ? `Tasado en ${formatearDOP(Number(articulo.valor_tasado))}`
+              : "Sin tasación registrada"}
             {articulo.kilataje && articulo.peso_gramos && (
               <> · {articulo.kilataje}K · {articulo.peso_gramos}g</>
             )}

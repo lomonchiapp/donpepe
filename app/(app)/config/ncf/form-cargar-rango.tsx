@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,23 +14,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  TIPO_COMPROBANTE_META,
+  TIPOS_COMPROBANTE,
+} from "@/lib/facturacion/tipos-comprobante";
 import type { TipoComprobante } from "@/lib/supabase/types";
 
 import { cargarRangoNcf } from "./actions";
 
-const TIPOS: Array<{ key: TipoComprobante; label: string }> = [
-  { key: "factura_consumo", label: "Consumo (02)" },
-  { key: "factura_credito_fiscal", label: "Crédito fiscal (01)" },
-  { key: "nota_debito", label: "Nota débito (03)" },
-  { key: "nota_credito", label: "Nota crédito (04)" },
-  { key: "compra", label: "Compra al público (11)" },
-  { key: "regimen_especial", label: "Régimen especial (14)" },
-  { key: "gubernamental", label: "Gubernamental (15)" },
-];
-
 export function FormCargarRango() {
   const [tipo, setTipo] = useState<TipoComprobante>("factura_consumo");
   const [serie, setSerie] = useState<"B" | "E">("E");
+
+  // Serie E solo permite tipos con codigoE. Si el dueño cambia a E estando
+  // parado en un tipo sin e-CF (p. ej. registro_especial), lo rebotamos al
+  // primero compatible para evitar enviar un valor inválido al server.
+  const tiposVisibles = useMemo(
+    () =>
+      TIPOS_COMPROBANTE.filter((t) =>
+        serie === "E" ? TIPO_COMPROBANTE_META[t].codigoE != null : true,
+      ),
+    [serie],
+  );
+
+  function onSerieChange(v: "B" | "E") {
+    setSerie(v);
+    const compat = TIPOS_COMPROBANTE.filter((t) =>
+      v === "E" ? TIPO_COMPROBANTE_META[t].codigoE != null : true,
+    );
+    if (!compat.includes(tipo)) {
+      setTipo(compat[0] ?? "factura_consumo");
+    }
+  }
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [vencimiento, setVencimiento] = useState("");
@@ -82,9 +97,9 @@ export function FormCargarRango() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {TIPOS.map((t) => (
-              <SelectItem key={t.key} value={t.key}>
-                {t.label}
+            {tiposVisibles.map((t) => (
+              <SelectItem key={t} value={t}>
+                {TIPO_COMPROBANTE_META[t].label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -93,7 +108,7 @@ export function FormCargarRango() {
 
       <div>
         <Label className="mb-1.5 block text-xs">Serie</Label>
-        <Select value={serie} onValueChange={(v) => setSerie(v as "B" | "E")}>
+        <Select value={serie} onValueChange={(v) => onSerieChange(v as "B" | "E")}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>

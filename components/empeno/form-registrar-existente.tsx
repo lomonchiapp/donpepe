@@ -37,6 +37,7 @@ import { formatearDOP, formatearFechaCorta } from "@/lib/format";
 import {
   calcularDeuda,
   calcularFechaVencimiento,
+  calcularTasaInteres,
   diasHastaVencimiento,
 } from "@/lib/calc/intereses";
 import { tasarOro, type Kilataje } from "@/lib/calc/oro";
@@ -87,12 +88,16 @@ export function FormRegistrarExistente({
   const [descripcion, setDescripcion] = useState("");
   const [kilataje, setKilataje] = useState<Kilataje>(18);
   const [peso, setPeso] = useState<number>(0);
-  const [valorTasado, setValorTasado] = useState<number>(0);
 
   // Préstamo
   const [fechaInicio, setFechaInicio] = useState<string>(hoyStr());
   const [monto, setMonto] = useState<number>(0);
-  const [tasa, setTasa] = useState<number>(defaults.tasa_interes_mensual);
+  // Tasa retroactiva: permitimos override manual porque un empeño viejo
+  // pudo haber sido cerrado con otra tasa. Si el usuario no toca el select,
+  // usa la tasa derivada del monto (tabla vigente).
+  const tasaAuto = useMemo(() => calcularTasaInteres(monto), [monto]);
+  const [tasaOverride, setTasaOverride] = useState<number | null>(null);
+  const tasa = tasaOverride ?? tasaAuto;
   const [plazo, setPlazo] = useState<number>(defaults.plazo_meses);
   const [notas, setNotas] = useState<string>("");
 
@@ -101,9 +106,10 @@ export function FormRegistrarExistente({
 
   const [pending, startTransition] = useTransition();
 
-  // Sugerir valor tasado si es joya y hay peso/precio del día
+  // Para joyas, mostramos el valor de mercado hoy solo como referencia
+  // (no se persiste, `valor_tasado` fue eliminado en migración 006).
   const precioOroHoy = precios_oro[kilataje] ?? null;
-  const valorSugerido = useMemo(() => {
+  const valorOroHoy = useMemo(() => {
     if (tipo === "joya_oro" && peso > 0 && precioOroHoy) {
       return tasarOro({
         kilataje,
@@ -186,11 +192,7 @@ export function FormRegistrarExistente({
       toast.error("Describe el artículo.");
       return;
     }
-    if (valorTasado <= 0) {
-      toast.error("Ingresa el valor tasado.");
-      return;
-    }
-    if (monto <= 0 || monto > valorTasado) {
+    if (monto <= 0) {
       toast.error("Monto prestado inválido.");
       return;
     }
@@ -211,9 +213,9 @@ export function FormRegistrarExistente({
       descripcion: descripcion.trim(),
       kilataje: tipo === "joya_oro" ? kilataje : null,
       peso_gramos: tipo === "joya_oro" && peso > 0 ? peso : null,
-      valor_tasado: valorTasado,
       monto_prestado: monto,
-      tasa_interes_mensual: tasa,
+      // Si el usuario hizo override, se envía; si no, la action la deriva.
+      tasa_interes_mensual: tasaOverride ?? undefined,
       plazo_meses: plazo,
       fecha_inicio: fechaInicio,
       notas: notas.trim() || null,
@@ -301,18 +303,31 @@ export function FormRegistrarExistente({
 
           <div className="space-y-1.5">
             <Label className="text-sm">Interés mensual</Label>
-            <Select value={String(tasa)} onValueChange={(v) => v && setTasa(Number(v))}>
+            <Select
+              value={tasaOverride !== null ? String(tasaOverride) : "auto"}
+              onValueChange={(v) => {
+                if (!v) return;
+                setTasaOverride(v === "auto" ? null : Number(v));
+              }}
+            >
               <SelectTrigger className="h-11">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[0.05, 0.08, 0.1, 0.12, 0.15].map((t) => (
+                <SelectItem value="auto">
+                  Auto ({tasaAuto > 0 ? `${(tasaAuto * 100).toFixed(0)}%` : "—"})
+                </SelectItem>
+                {[0.04, 0.05, 0.08, 0.1, 0.12, 0.15].map((t) => (
                   <SelectItem key={t} value={String(t)}>
                     {(t * 100).toFixed(0)}%
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Auto usa la tabla vigente; escoge otro % si el empeño viejo
+              tenía una tasa distinta.
+            </p>
           </div>
         </div>
       </Section>
@@ -392,35 +407,16 @@ export function FormRegistrarExistente({
                   className="h-10"
                 />
               </div>
-              {valorSugerido > 0 && (
+              {valorOroHoy > 0 && (
                 <p className="col-span-2 text-xs text-accent-foreground/80">
-                  Valor sugerido hoy:{" "}
-                  <button
-                    type="button"
-                    onClick={() => setValorTasado(valorSugerido)}
-                    className="font-semibold underline"
-                  >
-                    {formatearDOP(valorSugerido)}
-                  </button>
+                  Valor de mercado hoy:{" "}
+                  <span className="font-semibold">
+                    {formatearDOP(valorOroHoy)}
+                  </span>
                 </p>
               )}
             </div>
           )}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="valor" className="text-sm">
-              Valor tasado (RD$) <Req />
-            </Label>
-            <Input
-              id="valor"
-              type="number"
-              inputMode="numeric"
-              min="0"
-              value={valorTasado || ""}
-              onChange={(e) => setValorTasado(Number(e.target.value))}
-              className="h-11 text-base font-semibold tabular-nums"
-            />
-          </div>
         </div>
       </Section>
 

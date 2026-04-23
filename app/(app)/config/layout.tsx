@@ -1,12 +1,18 @@
 import { Settings } from "lucide-react";
 
 import { FadeIn } from "@/components/motion/fade-in";
+import { getAppUser } from "@/lib/permisos/check";
 
 import { ConfigTabs } from "./config-tabs";
 
 export const metadata = { title: "Configuración" };
 
-export default function ConfigLayout({ children }: { children: React.ReactNode }) {
+export default async function ConfigLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const me = await getAppUser();
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-6 md:py-8">
       <FadeIn>
@@ -20,7 +26,7 @@ export default function ConfigLayout({ children }: { children: React.ReactNode }
         </header>
       </FadeIn>
 
-      <ConfigTabs />
+      <ConfigTabs esAdmin={me?.es_admin ?? false} />
 
       <div className="mt-6">{children}</div>
     </div>

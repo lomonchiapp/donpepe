@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { formatearDOP, formatearFechaCorta } from "@/lib/format";
+import { TIPO_COMPROBANTE_META } from "@/lib/facturacion/tipos-comprobante";
 import type {
   ConfigNegocio,
   EstadoFactura,
@@ -11,25 +12,47 @@ import type {
 
 export const metadata = { title: "Factura" };
 
-const LABEL_TIPO: Record<TipoComprobante, string> = {
-  factura_credito_fiscal: "FACTURA CON CRÉDITO FISCAL",
-  factura_consumo: "FACTURA DE CONSUMO",
-  nota_debito: "NOTA DE DÉBITO",
-  nota_credito: "NOTA DE CRÉDITO",
-  compra: "COMPROBANTE DE COMPRA",
-  regimen_especial: "COMPROBANTE RÉGIMEN ESPECIAL",
-  gubernamental: "COMPROBANTE GUBERNAMENTAL",
-};
+/**
+ * Encabezado grande en el recuadro superior derecho. Debe ser corto porque
+ * convive con el NCF en una caja impresa. Derivamos de la metadata canónica
+ * usando `nombre` en mayúsculas para evitar listas paralelas que se
+ * desincronicen con el enum.
+ */
+function tituloImpresion(tipo: TipoComprobante): string {
+  const nombre = TIPO_COMPROBANTE_META[tipo].nombre.toUpperCase();
+  // Algunos tipos leen mejor con el calificador "COMPROBANTE" porque no son
+  // estrictamente "facturas" — mantenemos el criterio del diseño original.
+  switch (tipo) {
+    case "factura_credito_fiscal":
+      return "FACTURA CON CRÉDITO FISCAL";
+    case "factura_consumo":
+      return "FACTURA DE CONSUMO";
+    case "nota_debito":
+    case "nota_credito":
+      return nombre; // "NOTA DE DÉBITO" / "NOTA DE CRÉDITO"
+    case "compra":
+    case "gastos_menores":
+    case "registro_especial":
+    case "regimen_especial":
+    case "gubernamental":
+    case "exportaciones":
+    case "pagos_exterior":
+      return `COMPROBANTE ${nombre}`;
+  }
+}
 
-const CODIGO_DGII: Record<TipoComprobante, string> = {
-  factura_credito_fiscal: "01",
-  factura_consumo: "02",
-  nota_debito: "03",
-  nota_credito: "04",
-  compra: "11",
-  regimen_especial: "14",
-  gubernamental: "15",
-};
+/**
+ * Código DGII a mostrar en el recuadro. Depende de la serie del NCF:
+ *   B…  → código impreso clásico (01, 02, …)
+ *   E…  → código e-CF (31, 32, …)
+ * Si no hay NCF aún (borrador), asumimos serie B porque es el fallback
+ * más común de impresión física.
+ */
+function codigoDgii(tipo: TipoComprobante, ncf: string | null): string {
+  const meta = TIPO_COMPROBANTE_META[tipo];
+  if (ncf && ncf.startsWith("E") && meta.codigoE) return meta.codigoE;
+  return meta.codigoB;
+}
 
 interface FacturaPrintRow {
   id: string;
@@ -87,8 +110,8 @@ export default async function FacturaPrintPage({
   const config = (cfgRes.data as ConfigNegocio | null) ?? null;
   const items = [...(f.factura_items ?? [])].sort((a, b) => a.orden - b.orden);
 
-  const titulo = LABEL_TIPO[f.tipo_comprobante];
-  const codigoDgii = CODIGO_DGII[f.tipo_comprobante];
+  const titulo = tituloImpresion(f.tipo_comprobante);
+  const codigoDgiiTxt = codigoDgii(f.tipo_comprobante, f.ncf);
   const esCompra = f.tipo_comprobante === "compra";
 
   return (
@@ -136,7 +159,7 @@ export default async function FacturaPrintPage({
         <div className="shrink-0 text-right">
           <div className="rounded-md border-2 border-black p-3">
             <p className="text-[10px] font-semibold uppercase tracking-widest">
-              Comprobante {codigoDgii}
+              Comprobante {codigoDgiiTxt}
             </p>
             <p className="text-sm font-bold leading-tight">{titulo}</p>
             <div className="mt-2 border-t border-black pt-1">

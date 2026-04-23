@@ -6,6 +6,7 @@ import { FadeIn } from "@/components/motion/fade-in";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { BotonEliminarCliente } from "@/components/cliente/boton-eliminar";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import {
@@ -65,13 +66,19 @@ export default async function ClientePage({
               <p className="text-sm font-mono text-muted-foreground">{cliente.cedula}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link
               href={`/empenos/nuevo?cliente=${cliente.id}`}
               className={cn(buttonVariants({ variant: "default", size: "lg" }), "gap-1.5")}
             >
               <Plus className="h-4 w-4" /> Nuevo empeño
             </Link>
+            <BotonEliminarCliente
+              cliente_id={cliente.id}
+              nombre={cliente.nombre_completo}
+              totalEmpenos={prestamos.length}
+              totalCompras={compras.length}
+            />
           </div>
         </div>
       </FadeIn>

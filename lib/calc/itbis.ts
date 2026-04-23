@@ -10,6 +10,8 @@
  * no gravados). Cada ítem de factura define si aplica ITBIS.
  */
 
+import { TIPO_COMPROBANTE_META } from "@/lib/facturacion/tipos-comprobante";
+
 export const ITBIS_TASA_DEFAULT = 18;
 
 /**
@@ -158,16 +160,17 @@ export function formatearNcf(
   return serie + tipo_codigo + String(secuencia).padStart(largo, "0");
 }
 
-const TIPO_A_CODIGO: Record<string, string> = {
-  factura_credito_fiscal: "01",
-  factura_consumo: "02",
-  nota_debito: "03",
-  nota_credito: "04",
-  compra: "11",
-  regimen_especial: "14",
-  gubernamental: "15",
-};
-
+/**
+ * Devuelve el código numérico DGII para serie B (impreso) correspondiente al
+ * tipo de comprobante. Para serie E (e-CF) el código cambia (ej. 01 → 31);
+ * ese mapeo vive en `@/lib/facturacion/tipos-comprobante`. Esta función
+ * existe históricamente para callers que no distinguen serie — por ahora
+ * mantenemos la semántica "código impreso" para no romperlos.
+ */
 export function codigoTipoComprobante(tipo: string): string | null {
-  return TIPO_A_CODIGO[tipo] ?? null;
+  if (tipo in TIPO_COMPROBANTE_META) {
+    return TIPO_COMPROBANTE_META[tipo as keyof typeof TIPO_COMPROBANTE_META]
+      .codigoB;
+  }
+  return null;
 }

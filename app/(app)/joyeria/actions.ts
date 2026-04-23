@@ -429,7 +429,11 @@ export async function convertirArticuloAPieza(input: unknown) {
       tejido: d.tejido ?? null,
       marca: d.marca ?? null,
       piedras: d.piedras.length > 0 ? d.piedras : null,
-      costo_material: Number(articulo.valor_tasado),
+      // Artículos nuevos ya no guardan `valor_tasado` (migración 006);
+      // para esos casos usamos 0 como costo de material y el dueño registra
+      // el costo real vía mano de obra o ajuste posterior.
+      costo_material:
+        articulo.valor_tasado != null ? Number(articulo.valor_tasado) : 0,
       costo_mano_obra: d.costo_mano_obra,
       precio_venta: d.precio_venta,
       precio_minimo: d.precio_minimo ?? null,

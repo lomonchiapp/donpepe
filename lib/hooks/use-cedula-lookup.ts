@@ -7,10 +7,11 @@ import { limpiarCedula } from "@/lib/validaciones/cedula-do";
 export type CedulaLookupData = {
   valid: true;
   cedula: string;
-  fullName?: string;
-  firstName?: string;
-  lastName?: string;
-  source: "ogtic+megaplus" | "megaplus" | "ogtic" | "luhn";
+  /**
+   * `padron`: confirmada contra OGTIC/JCE.
+   * `luhn`: solo se validó el dígito verificador (OGTIC no respondió).
+   */
+  source: "padron" | "luhn";
 };
 
 export type CedulaLookupStatus = "idle" | "typing" | "loading" | "found" | "not-found";
@@ -30,7 +31,7 @@ const INITIAL: State = { status: "idle", data: null, message: null };
  * ```tsx
  * const { state, lookup, reset } = useCedulaLookup();
  * <Input onChange={(e) => lookup(e.target.value)} />
- * {state.status === "found" && <p>{state.data.fullName}</p>}
+ * {state.status === "found" && <p>{state.data.cedula} válida</p>}
  * ```
  */
 export function useCedulaLookup(opts: { debounceMs?: number } = {}) {

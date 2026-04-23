@@ -9,6 +9,7 @@ import { obtenerAppUserId } from "@/lib/supabase/current-user";
 import {
   calcularDeuda,
   calcularFechaVencimiento,
+  calcularTasaInteres,
 } from "@/lib/calc/intereses";
 import {
   crearPagoConRecibo,
@@ -24,15 +25,19 @@ import type {
 
 const TipoArticuloSchema = z.enum(["joya_oro", "electrodomestico", "tenis", "otro"]);
 
+/**
+ * Nota: `valor_tasado` se quitó del flujo (migración 006). La tasa de
+ * interés también se deriva en el servidor via `calcularTasaInteres` —
+ * ignoramos cualquier tasa que venga del cliente para cerrar la puerta
+ * a que alguien manipule el form.
+ */
 const CrearEmpenoSchema = z.object({
   cliente_id: z.uuid(),
   tipo: TipoArticuloSchema,
   descripcion: z.string().min(3).max(200),
   kilataje: z.coerce.number().int().optional().nullable(),
   peso_gramos: z.coerce.number().positive().optional().nullable(),
-  valor_tasado: z.coerce.number().positive(),
   monto_prestado: z.coerce.number().positive(),
-  tasa_interes_mensual: z.coerce.number().min(0).max(1),
   plazo_meses: z.coerce.number().int().min(1).max(12),
   fotos_urls: z.array(z.string().url()).optional(),
   notas: z.string().optional().nullable(),
@@ -45,9 +50,7 @@ export async function crearEmpeno(formData: FormData) {
     descripcion: formData.get("descripcion")?.toString() ?? "",
     kilataje: formData.get("kilataje")?.toString() || null,
     peso_gramos: formData.get("peso_gramos")?.toString() || null,
-    valor_tasado: formData.get("valor_tasado")?.toString() ?? "",
     monto_prestado: formData.get("monto_prestado")?.toString() ?? "",
-    tasa_interes_mensual: formData.get("tasa_interes_mensual")?.toString() ?? "",
     plazo_meses: formData.get("plazo_meses")?.toString() ?? "",
     notas: formData.get("notas")?.toString() || null,
     fotos_urls: formData.getAll("fotos_urls").map((v) => v.toString()).filter(Boolean),
@@ -59,9 +62,7 @@ export async function crearEmpeno(formData: FormData) {
   }
 
   const d = parsed.data;
-  if (d.monto_prestado > d.valor_tasado) {
-    return { error: "El monto prestado no puede superar el valor tasado." };
-  }
+  const tasa = calcularTasaInteres(d.monto_prestado);
 
   const supabase = await createClient();
 
@@ -73,7 +74,7 @@ export async function crearEmpeno(formData: FormData) {
       descripcion: d.descripcion,
       kilataje: d.kilataje ?? null,
       peso_gramos: d.peso_gramos ?? null,
-      valor_tasado: d.valor_tasado,
+      valor_tasado: null,
       fotos_urls: d.fotos_urls ?? [],
       estado: "empenado",
     })
@@ -100,7 +101,7 @@ export async function crearEmpeno(formData: FormData) {
       cliente_id: d.cliente_id,
       articulo_id: articulo.id,
       monto_prestado: d.monto_prestado,
-      tasa_interes_mensual: d.tasa_interes_mensual,
+      tasa_interes_mensual: tasa,
       plazo_meses: d.plazo_meses,
       fecha_inicio: fechaInicio.toISOString().slice(0, 10),
       fecha_vencimiento: fechaVenc.toISOString().slice(0, 10),
@@ -143,9 +144,13 @@ const RegistrarExistenteSchema = z.object({
   descripcion: z.string().min(3).max(200),
   kilataje: z.coerce.number().int().optional().nullable(),
   peso_gramos: z.coerce.number().positive().optional().nullable(),
-  valor_tasado: z.coerce.number().positive(),
   monto_prestado: z.coerce.number().positive(),
-  tasa_interes_mensual: z.coerce.number().min(0).max(1),
+  /**
+   * Solo para retroactivos: el dueño puede pasar la tasa histórica (ej:
+   * empeños viejos con 8% o 12%). Si no se envía, se deriva con la
+   * tabla actual.
+   */
+  tasa_interes_mensual: z.coerce.number().min(0).max(1).optional(),
   plazo_meses: z.coerce.number().int().min(1).max(12),
   fecha_inicio: z.iso.date(),
   fotos_urls: z.array(z.string().url()).optional(),
@@ -162,6 +167,7 @@ export async function registrarEmpenoExistente(input: unknown) {
   }
 
   const d = parsed.data;
+  const tasa = d.tasa_interes_mensual ?? calcularTasaInteres(d.monto_prestado);
 
   // Validaciones de coherencia temporal
   const hoy = new Date().toISOString().slice(0, 10);
@@ -169,9 +175,6 @@ export async function registrarEmpenoExistente(input: unknown) {
     return {
       error: "Para empeños futuros usa el flujo de 'Nuevo empeño'.",
     };
-  }
-  if (d.monto_prestado > d.valor_tasado) {
-    return { error: "El monto prestado no puede superar el valor tasado." };
   }
   for (const p of d.pagos_previos) {
     if (p.fecha < d.fecha_inicio) {
@@ -209,7 +212,7 @@ export async function registrarEmpenoExistente(input: unknown) {
       descripcion: d.descripcion,
       kilataje: d.kilataje ?? null,
       peso_gramos: d.peso_gramos ?? null,
-      valor_tasado: d.valor_tasado,
+      valor_tasado: null,
       fotos_urls: d.fotos_urls ?? [],
       estado: "empenado",
     })
@@ -234,7 +237,7 @@ export async function registrarEmpenoExistente(input: unknown) {
       cliente_id: d.cliente_id,
       articulo_id: articulo.id,
       monto_prestado: d.monto_prestado,
-      tasa_interes_mensual: d.tasa_interes_mensual,
+      tasa_interes_mensual: tasa,
       plazo_meses: d.plazo_meses,
       fecha_inicio: d.fecha_inicio,
       fecha_vencimiento: fechaVencStr,

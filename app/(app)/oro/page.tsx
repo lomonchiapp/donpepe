@@ -5,6 +5,7 @@ import { FadeIn } from "@/components/motion/fade-in";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { TarjetaPrecioOro } from "@/components/oro/tarjeta-precio";
+import { TarjetaSpotInternacional } from "@/components/oro/tarjeta-spot-internacional";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { formatearFechaLarga } from "@/lib/format";
@@ -64,6 +65,10 @@ export default async function OroPage() {
           </FadeIn>
         ))}
       </section>
+
+      <div className="mt-6">
+        <TarjetaSpotInternacional />
+      </div>
 
       <FadeIn delay={0.3} className="mt-8">
         <Card className="bg-accent/10 border-accent/30">

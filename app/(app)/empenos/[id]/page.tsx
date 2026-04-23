@@ -160,12 +160,14 @@ export default async function EmpenoDetallePage({
                     {prest.articulos.kilataje}K · {prest.articulos.peso_gramos}g
                   </Badge>
                 )}
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Tasado en{" "}
-                  <span className="font-semibold text-foreground">
-                    {formatearDOP(Number(prest.articulos?.valor_tasado ?? 0))}
-                  </span>
-                </p>
+                {prest.articulos?.valor_tasado != null && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Tasado en{" "}
+                    <span className="font-semibold text-foreground">
+                      {formatearDOP(Number(prest.articulos.valor_tasado))}
+                    </span>
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>

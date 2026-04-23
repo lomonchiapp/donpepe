@@ -7,19 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
 import { formatearDOP, formatearFechaCorta } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { TIPO_COMPROBANTE_META } from "@/lib/facturacion/tipos-comprobante";
 import type { EstadoFactura, TipoComprobante } from "@/lib/supabase/types";
 
 export const metadata = { title: "Facturas" };
-
-const LABEL_TIPO: Record<TipoComprobante, string> = {
-  factura_credito_fiscal: "Crédito fiscal",
-  factura_consumo: "Consumo",
-  nota_debito: "Nota débito",
-  nota_credito: "Nota crédito",
-  compra: "Compra",
-  regimen_especial: "Régimen especial",
-  gubernamental: "Gubernamental",
-};
 
 const TONO_ESTADO: Record<EstadoFactura, string> = {
   borrador: "bg-muted text-muted-foreground",
@@ -144,7 +135,7 @@ export default async function FacturasPage({
                           {f.ncf ?? f.codigo_interno}
                         </span>
                         <Badge variant="outline" className="text-[10px]">
-                          {LABEL_TIPO[f.tipo_comprobante]}
+                          {TIPO_COMPROBANTE_META[f.tipo_comprobante].corto}
                         </Badge>
                         <span
                           className={cn(

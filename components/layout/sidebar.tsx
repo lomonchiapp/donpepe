@@ -16,68 +16,86 @@ import {
   Gem,
   Receipt,
   Wallet,
+  Calculator,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import type { ModuloCodigo } from "@/lib/permisos/modulos";
 
-const SECTIONS: Array<{
-  titulo: string;
-  items: Array<{
-    href: string;
-    label: string;
-    icon: typeof Home;
-    match: (p: string) => boolean;
-  }>;
-}> = [
+type NavItem = {
+  codigo: ModuloCodigo;
+  href: string;
+  label: string;
+  icon: typeof Home;
+  match: (p: string) => boolean;
+};
+
+const SECTIONS: Array<{ titulo: string; items: NavItem[] }> = [
   {
     titulo: "Operación",
     items: [
-      { href: "/", label: "Inicio", icon: Home, match: (p) => p === "/" },
-      { href: "/empenos", label: "Empeños", icon: FileText, match: (p) => p.startsWith("/empenos") },
-      { href: "/clientes", label: "Clientes", icon: Users, match: (p) => p.startsWith("/clientes") },
+      { codigo: "inicio", href: "/", label: "Inicio", icon: Home, match: (p) => p === "/" },
+      { codigo: "empenos", href: "/empenos", label: "Empeños", icon: FileText, match: (p) => p.startsWith("/empenos") },
+      { codigo: "clientes", href: "/clientes", label: "Clientes", icon: Users, match: (p) => p.startsWith("/clientes") },
     ],
   },
   {
     titulo: "Oro",
     items: [
-      { href: "/oro", label: "Precios del día", icon: Coins, match: (p) => p === "/oro" },
-      { href: "/oro/compra", label: "Compra de oro", icon: ShoppingCart, match: (p) => p.startsWith("/oro/compra") },
+      { codigo: "oro_precios", href: "/oro", label: "Precios del día", icon: Coins, match: (p) => p === "/oro" },
+      { codigo: "oro_compra", href: "/oro/compra", label: "Compra de oro", icon: ShoppingCart, match: (p) => p.startsWith("/oro/compra") },
     ],
   },
   {
     titulo: "Joyería",
     items: [
-      { href: "/joyeria", label: "Piezas", icon: Gem, match: (p) => p.startsWith("/joyeria") },
+      { codigo: "joyeria", href: "/joyeria", label: "Piezas", icon: Gem, match: (p) => p.startsWith("/joyeria") },
     ],
   },
   {
     titulo: "Inventario y ventas",
     items: [
-      { href: "/inventario", label: "Inventario", icon: Package, match: (p) => p.startsWith("/inventario") },
-      { href: "/ventas", label: "Ventas", icon: ShoppingCart, match: (p) => p.startsWith("/ventas") },
+      { codigo: "inventario", href: "/inventario", label: "Inventario", icon: Package, match: (p) => p.startsWith("/inventario") },
+      { codigo: "ventas", href: "/ventas", label: "Ventas", icon: ShoppingCart, match: (p) => p.startsWith("/ventas") },
     ],
   },
   {
     titulo: "Caja y facturación",
     items: [
-      { href: "/pagos", label: "Pagos", icon: Wallet, match: (p) => p.startsWith("/pagos") },
-      { href: "/recibos", label: "Recibos", icon: Receipt, match: (p) => p.startsWith("/recibos") },
-      { href: "/facturas", label: "Facturas", icon: FileText, match: (p) => p.startsWith("/facturas") },
+      { codigo: "pagos", href: "/pagos", label: "Pagos", icon: Wallet, match: (p) => p.startsWith("/pagos") },
+      { codigo: "recibos", href: "/recibos", label: "Recibos", icon: Receipt, match: (p) => p.startsWith("/recibos") },
+      { codigo: "facturas", href: "/facturas", label: "Facturas", icon: FileText, match: (p) => p.startsWith("/facturas") },
     ],
   },
   {
     titulo: "Análisis",
     items: [
-      { href: "/reportes", label: "Reportes", icon: BarChart3, match: (p) => p.startsWith("/reportes") },
-      { href: "/config", label: "Configuración", icon: Settings, match: (p) => p.startsWith("/config") },
+      { codigo: "reportes", href: "/reportes", label: "Reportes", icon: BarChart3, match: (p) => p.startsWith("/reportes") },
+      { codigo: "contabilidad", href: "/contabilidad", label: "Contabilidad", icon: Calculator, match: (p) => p.startsWith("/contabilidad") },
+      { codigo: "config", href: "/config", label: "Configuración", icon: Settings, match: (p) => p.startsWith("/config") },
     ],
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  /** Si es admin, ve todo. */
+  esAdmin: boolean;
+  /** Lista de codigos de modulo a los que el usuario tiene acceso (ignorado si esAdmin=true). */
+  modulosPermitidos: string[];
+}
+
+export function Sidebar({ esAdmin, modulosPermitidos }: SidebarProps) {
   const pathname = usePathname();
+
+  const permitido = (codigo: ModuloCodigo) =>
+    esAdmin || modulosPermitidos.includes(codigo);
+
+  const seccionesVisibles = SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => permitido(item.codigo)),
+  })).filter((section) => section.items.length > 0);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -98,7 +116,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 pb-4">
-        {SECTIONS.map((section) => (
+        {seccionesVisibles.map((section) => (
           <div key={section.titulo}>
             <h2 className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               {section.titulo}

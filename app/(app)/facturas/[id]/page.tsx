@@ -15,16 +15,7 @@ import type {
   TipoComprobante,
 } from "@/lib/supabase/types";
 import { AnularFacturaBoton } from "@/components/facturas/anular-boton";
-
-const LABEL_TIPO: Record<TipoComprobante, string> = {
-  factura_credito_fiscal: "Factura con crédito fiscal (01)",
-  factura_consumo: "Factura de consumo (02)",
-  nota_debito: "Nota de débito (03)",
-  nota_credito: "Nota de crédito (04)",
-  compra: "Compra al público (11)",
-  regimen_especial: "Régimen especial (14)",
-  gubernamental: "Gubernamental (15)",
-};
+import { TIPO_COMPROBANTE_META } from "@/lib/facturacion/tipos-comprobante";
 
 const TONO_ESTADO: Record<EstadoFactura, string> = {
   borrador: "bg-muted text-muted-foreground",
@@ -129,7 +120,7 @@ export default async function FacturaDetallePage({
                   </h1>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {LABEL_TIPO[f.tipo_comprobante]}
+                  {TIPO_COMPROBANTE_META[f.tipo_comprobante].label}
                 </p>
                 {f.fecha_emision && (
                   <p className="text-xs text-muted-foreground">

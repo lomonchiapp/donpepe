@@ -39,11 +39,17 @@ export function FormConvertirArticulo({ articulo, categorias }: Props) {
   const [material, setMaterial] = useState<MaterialJoyeria>(
     articulo.tipo === "joya_oro" ? "oro" : "mixto",
   );
+  // Si hay tasado histórico, sugerimos precio de venta con margen. Para
+  // artículos nuevos sin tasado el operador los define a mano — es mejor
+  // cero que un precio inventado.
+  const baseTasado = articulo.valor_tasado != null
+    ? Number(articulo.valor_tasado)
+    : 0;
   const [precioVenta, setPrecioVenta] = useState<number>(
-    Math.round(Number(articulo.valor_tasado) * 1.8),
+    baseTasado > 0 ? Math.round(baseTasado * 1.8) : 0,
   );
   const [precioMinimo, setPrecioMinimo] = useState<number>(
-    Math.round(Number(articulo.valor_tasado) * 1.3),
+    baseTasado > 0 ? Math.round(baseTasado * 1.3) : 0,
   );
   const [manoObra, setManoObra] = useState<number>(0);
   const [ubicacion, setUbicacion] = useState("");
@@ -94,7 +100,9 @@ export function FormConvertirArticulo({ articulo, categorias }: Props) {
         <p className="text-xs text-muted-foreground">
           {articulo.kilataje && `${articulo.kilataje}K · `}
           {articulo.peso_gramos && `${articulo.peso_gramos}g · `}
-          Valorado en {formatearDOP(Number(articulo.valor_tasado))}
+          {articulo.valor_tasado != null
+            ? `Valorado en ${formatearDOP(Number(articulo.valor_tasado))}`
+            : "Sin tasación registrada"}
         </p>
       </div>
 
@@ -188,7 +196,7 @@ export function FormConvertirArticulo({ articulo, categorias }: Props) {
             className="h-11 tabular-nums"
           />
           <p className="text-[11px] text-muted-foreground">
-            Sumado al valor tasado original para el costo total.
+            Se suma al costo de material para el costo total de la pieza.
           </p>
         </div>
         <div className="space-y-1.5">

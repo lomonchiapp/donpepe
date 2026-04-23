@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   calcularDeuda,
   calcularFechaVencimiento,
+  calcularTasaInteres,
   diasHastaVencimiento,
   semaforoVencimiento,
   sugerirMontoPrestamo,
@@ -74,4 +75,26 @@ test("semaforoVencimiento clasifica por urgencia", () => {
 test("sugerirMontoPrestamo redondea a múltiplos de 100", () => {
   assert.equal(sugerirMontoPrestamo(8_750, 0.6), 5_200);
   assert.equal(sugerirMontoPrestamo(10_000, 0.7), 7_000);
+});
+
+test("calcularTasaInteres aplica tabla escalonada del dueño", () => {
+  // Escalón ≤ 5,000 → 10%
+  assert.equal(calcularTasaInteres(1_000), 0.1);
+  assert.equal(calcularTasaInteres(5_000), 0.1);
+
+  // Escalón (5,000, 50,000) → 5%
+  assert.equal(calcularTasaInteres(5_001), 0.05);
+  assert.equal(calcularTasaInteres(10_000), 0.05);
+  assert.equal(calcularTasaInteres(25_000), 0.05);
+  assert.equal(calcularTasaInteres(40_000), 0.05);
+  assert.equal(calcularTasaInteres(49_999), 0.05);
+
+  // Escalón ≥ 50,000 → 4%
+  assert.equal(calcularTasaInteres(50_000), 0.04);
+  assert.equal(calcularTasaInteres(100_000), 0.04);
+
+  // Monto inválido → 0 (caller debe tratar como "sin definir")
+  assert.equal(calcularTasaInteres(0), 0);
+  assert.equal(calcularTasaInteres(-5_000), 0);
+  assert.equal(calcularTasaInteres(Number.NaN), 0);
 });

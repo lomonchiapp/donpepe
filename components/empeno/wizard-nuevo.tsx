@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { formatearDOP } from "@/lib/format";
 import {
   calcularFechaVencimiento,
+  calcularTasaInteres,
   sugerirMontoPrestamo,
 } from "@/lib/calc/intereses";
 import { tasarOro, type Kilataje } from "@/lib/calc/oro";
@@ -40,6 +41,10 @@ import type { Cliente, TipoArticulo } from "@/lib/supabase/types";
 interface Props {
   cliente_preseleccionado?: Cliente | null;
   defaults: {
+    /**
+     * Ya no se usa para fijar la tasa (se deriva por tabla), pero se
+     * mantiene en la prop para no romper callers.
+     */
     tasa_interes_mensual: number;
     plazo_meses: number;
     porcentaje_prestamo: number;
@@ -62,37 +67,41 @@ export function WizardNuevoEmpeno({
   const [paso, setPaso] = useState(cliente_preseleccionado ? 1 : 0);
   const [cliente, setCliente] = useState<Cliente | null>(cliente_preseleccionado ?? null);
 
-  // Paso 2
+  // Paso 2 — Artículo
   const [tipo, setTipo] = useState<TipoArticulo>("joya_oro");
   const [descripcion, setDescripcion] = useState("");
   const [kilataje, setKilataje] = useState<Kilataje>(18);
   const [peso, setPeso] = useState<number>(0);
-  const [valorTasado, setValorTasado] = useState<number>(0);
 
-  // Paso 3
+  // Paso 3 — Préstamo
   const [monto, setMonto] = useState<number>(0);
-  const [tasa, setTasa] = useState<number>(defaults.tasa_interes_mensual);
   const [plazo, setPlazo] = useState<number>(defaults.plazo_meses);
   const [pending, startTransition] = useTransition();
 
-  // Sugerir valor tasado automáticamente cuando es joya_oro
+  // Para joya_oro, calculamos un "valor de mercado hoy" en memoria
+  // (sin persistirlo) y sobre eso proponemos el monto sugerido.
   const precioOroHoy = precios_oro[kilataje] ?? null;
-  const valorSugerido = useMemo(() => {
+  const valorOroHoy = useMemo(() => {
     if (tipo === "joya_oro" && peso > 0 && precioOroHoy) {
-      const t = tasarOro({
+      return tasarOro({
         kilataje,
         peso_gramos: peso,
         precio_dop_gramo: precioOroHoy,
-      });
-      return t.precio_final;
+      }).precio_final;
     }
     return 0;
   }, [tipo, peso, kilataje, precioOroHoy]);
 
   const montoSugerido = useMemo(
-    () => (valorTasado > 0 ? sugerirMontoPrestamo(valorTasado, defaults.porcentaje_prestamo) : 0),
-    [valorTasado, defaults.porcentaje_prestamo],
+    () =>
+      valorOroHoy > 0
+        ? sugerirMontoPrestamo(valorOroHoy, defaults.porcentaje_prestamo)
+        : 0,
+    [valorOroHoy, defaults.porcentaje_prestamo],
   );
+
+  // Tasa automática por tabla (nunca editable desde la UI).
+  const tasa = useMemo(() => calcularTasaInteres(monto), [monto]);
 
   const fechaVenc = useMemo(
     () => calcularFechaVencimiento({ fecha_inicio: new Date(), plazo_meses: plazo }),
@@ -109,11 +118,7 @@ export function WizardNuevoEmpeno({
         toast.error("Describe el artículo.");
         return;
       }
-      if (valorTasado <= 0) {
-        toast.error("Ingresa el valor tasado.");
-        return;
-      }
-      if (monto === 0) setMonto(sugerirMontoPrestamo(valorTasado, defaults.porcentaje_prestamo));
+      if (monto === 0 && montoSugerido > 0) setMonto(montoSugerido);
     }
     setPaso((p) => Math.min(p + 1, 2));
   }
@@ -124,7 +129,7 @@ export function WizardNuevoEmpeno({
 
   async function handleSubmit() {
     if (!cliente) return;
-    if (monto <= 0 || monto > valorTasado) {
+    if (monto <= 0) {
       toast.error("Monto inválido.");
       return;
     }
@@ -137,9 +142,9 @@ export function WizardNuevoEmpeno({
       fd.set("kilataje", String(kilataje));
       fd.set("peso_gramos", String(peso));
     }
-    fd.set("valor_tasado", String(valorTasado));
+    // `valor_tasado` ya no se persiste (ver migración 006).
+    // La `tasa_interes_mensual` la deriva el server según `monto_prestado`.
     fd.set("monto_prestado", String(monto));
-    fd.set("tasa_interes_mensual", String(tasa));
     fd.set("plazo_meses", String(plazo));
 
     startTransition(async () => {
@@ -257,17 +262,13 @@ export function WizardNuevoEmpeno({
                 {precioOroHoy ? (
                   <p className="col-span-2 text-xs text-accent-foreground/80">
                     Precio hoy {kilataje}K: {formatearDOP(precioOroHoy)}/g
-                    {valorSugerido > 0 && (
+                    {valorOroHoy > 0 && (
                       <>
                         {" · "}
-                        Valor sugerido:{" "}
-                        <button
-                          type="button"
-                          onClick={() => setValorTasado(valorSugerido)}
-                          className="font-semibold underline"
-                        >
-                          {formatearDOP(valorSugerido)}
-                        </button>
+                        Valor de mercado hoy:{" "}
+                        <span className="font-semibold">
+                          {formatearDOP(valorOroHoy)}
+                        </span>
                       </>
                     )}
                   </p>
@@ -278,20 +279,6 @@ export function WizardNuevoEmpeno({
                 )}
               </div>
             )}
-
-            <div className="space-y-2">
-              <Label htmlFor="valor" className="text-base">Valor tasado (RD$)</Label>
-              <Input
-                id="valor"
-                type="number"
-                inputMode="numeric"
-                min="0"
-                value={valorTasado || ""}
-                onChange={(e) => setValorTasado(Number(e.target.value))}
-                placeholder="10,000"
-                className="h-12 text-lg font-semibold"
-              />
-            </div>
           </motion.div>
         )}
 
@@ -313,8 +300,10 @@ export function WizardNuevoEmpeno({
                   <span className="font-semibold">{cliente?.nombre_completo}</span>
                 </div>
                 <div className="mt-1 flex justify-between">
-                  <span className="text-muted-foreground">Valor tasado</span>
-                  <span className="font-semibold">{formatearDOP(valorTasado)}</span>
+                  <span className="text-muted-foreground">Artículo</span>
+                  <span className="font-semibold truncate max-w-[60%] text-right">
+                    {descripcion || "—"}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -361,18 +350,14 @@ export function WizardNuevoEmpeno({
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Interés mensual</Label>
-                <Select value={String(tasa)} onValueChange={(v) => v && setTasa(Number(v))}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[0.05, 0.08, 0.1, 0.12, 0.15].map((t) => (
-                      <SelectItem key={t} value={String(t)}>
-                        {(t * 100).toFixed(0)}%
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex h-11 items-center justify-between rounded-md border border-input bg-muted/40 px-3">
+                  <span className="text-base font-semibold tabular-nums">
+                    {tasa > 0 ? `${(tasa * 100).toFixed(0)}%` : "—"}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    auto
+                  </span>
+                </div>
               </div>
             </div>
 

@@ -51,11 +51,15 @@ export type TipoRecibo =
 export type TipoComprobante =
   | "factura_credito_fiscal" // 01 / B01 / E31
   | "factura_consumo" // 02 / B02 / E32
-  | "nota_debito" // 03
-  | "nota_credito" // 04
-  | "compra" // 11 / B11 / E41 (compra de oro al público)
-  | "regimen_especial" // 14
-  | "gubernamental"; // 15
+  | "nota_debito" // 03 / E33
+  | "nota_credito" // 04 / E34
+  | "compra" // 11 / B11 / E41 (compra al público)
+  | "gastos_menores" // 12 / E43
+  | "registro_especial" // 13
+  | "regimen_especial" // 14 / E44
+  | "gubernamental" // 15 / E45
+  | "exportaciones" // 16 / E46
+  | "pagos_exterior"; // 17 / E47
 export type EstadoFactura =
   | "borrador"
   | "emitida"
@@ -120,6 +124,10 @@ export interface AppUser {
   email: string;
   nombre: string;
   rol: UserRol;
+  /** Super-admin inmutable. Bypasa la lista de módulos y puede crear/editar usuarios. */
+  es_admin: boolean;
+  /** Códigos de módulos a los que el usuario tiene acceso. El admin ignora esta lista. */
+  modulos_permitidos: string[];
   telefono_whatsapp: string | null;
   recibir_alertas: boolean;
   activo: boolean;
@@ -160,8 +168,138 @@ export interface Cliente {
   foto_cedula_url: string | null;
   foto_cliente_url: string | null;
   notas: string | null;
+  // Campos extendidos (migración 009) — usados por el libro de compraventa
+  // y reportes DGII. Todos opcionales.
+  edad: number | null;
+  color: string | null;
+  nacionalidad: string | null;
+  estado_civil: string | null;
+  oficio_profesion: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Formatos DGII generables. */
+export type FormatoDgii = "606" | "607" | "608";
+
+/** Fila de `reportes_dgii_generados` (migración 009). */
+export interface ReporteDgiiGenerado {
+  id: string;
+  formato: FormatoDgii;
+  /** 'YYYY-MM' */
+  periodo: string;
+  generado_por: string | null;
+  generado_at: string;
+  conteo_registros: number;
+  total_monto: number;
+  total_itbis: number;
+  archivo_txt_contenido: string | null;
+  notas: string | null;
+  created_at: string;
+}
+
+/**
+ * Fila de la vista `v_libro_compraventa` (reescrita en migración 010).
+ *
+ * La vista unifica compras de oro y gastos operativos en un solo
+ * libro para el contable. Se puede distinguir por `origen`:
+ *   - 'compra_oro' → registro de compra de oro (tiene cédula, kilataje…)
+ *   - 'gasto'      → gasto operativo (tiene categoría DGII, NCF…)
+ *
+ * Los campos específicos de una fuente son `null` para la otra.
+ */
+export interface LibroCompraventaRow {
+  registro_id: string;
+  origen: "compra_oro" | "gasto";
+  orden_numero: string;
+  cedula: string;
+  fecha: string;
+  nombre: string;
+  edad: number | null;
+  color: string | null;
+  nacionalidad: string | null;
+  estado_civil: string | null;
+  oficio_profesion: string | null;
+  domicilio: string | null;
+  telefono: string | null;
+  kilataje: number | null;
+  peso_gramos: number | null;
+  precio_gramo: number | null;
+  valor: number;
+  efectos: string;
+  notas: string | null;
+  fecha_salida: string | null;
+  ncf: string | null;
+  categoria: string;
+  disponible: boolean | null;
+}
+
+/** Tipo de bien/servicio DGII (Formato 606). */
+export type TipoGastoDgii =
+  | "01" // Gastos de Personal
+  | "02" // Trabajos, Suministros y Servicios
+  | "03" // Arrendamientos
+  | "04" // Activos Fijos
+  | "05" // Representación
+  | "06" // Otras Deducciones Admitidas
+  | "07" // Gastos Financieros
+  | "08" // Gastos Extraordinarios
+  | "09" // Compras/Gastos que forman parte del Costo de Venta
+  | "10" // Adquisiciones de Activos
+  | "11"; // Seguros
+
+/** Forma de pago DGII (Formato 606). */
+export type FormaPagoDgii =
+  | "01" // Efectivo
+  | "02" // Cheques/Transferencias/Depósitos
+  | "03" // Tarjeta Crédito/Débito
+  | "04" // Compra a Crédito
+  | "05" // Permuta
+  | "06" // Nota de Crédito
+  | "07"; // Mixto
+
+/** Gasto operativo (migración 010) — alimenta el 606. */
+export interface GastoOperativo {
+  id: string;
+  fecha: string;
+  concepto: string;
+  monto: number;
+  categoria: TipoGastoDgii;
+  rnc_proveedor: string | null;
+  nombre_proveedor: string | null;
+  /** '1' RNC, '2' Cédula. */
+  tipo_id_proveedor: "1" | "2" | null;
+  ncf: string | null;
+  ncf_modificado: string | null;
+  itbis_facturado: number;
+  itbis_retenido: number;
+  forma_pago: FormaPagoDgii;
+  notas: string | null;
+  registrado_por: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Snapshot diario de precios spot de metales preciosos (migración 010).
+ * Fuente: MetalpriceAPI. Se refresca vía cron una vez al día.
+ * Es INFORMATIVO — los precios locales están en `precios_oro`.
+ */
+export interface SpotMetalesDiario {
+  fecha: string;
+  oro_24k_dop_gramo: number | null;
+  plata_dop_gramo: number | null;
+  platino_dop_gramo: number | null;
+  paladio_dop_gramo: number | null;
+  oro_usd_oz: number | null;
+  plata_usd_oz: number | null;
+  platino_usd_oz: number | null;
+  paladio_usd_oz: number | null;
+  usd_dop: number | null;
+  fuente: string;
+  actualizado_at: string;
+  notas: string | null;
+  created_at: string;
 }
 
 export interface Articulo {
@@ -172,7 +310,12 @@ export interface Articulo {
   fotos_urls: string[];
   kilataje: number | null;
   peso_gramos: number | null;
-  valor_tasado: number;
+  /**
+   * Valor tasado — nullable desde la migración 006. Los empeños nuevos
+   * no lo capturan (se quitó del flujo porque guardar la cifra puede
+   * volverse perjudicial con el tiempo). Registros legados lo mantienen.
+   */
+  valor_tasado: number | null;
   estado: EstadoArticulo;
   created_at: string;
   updated_at: string;
@@ -319,6 +462,56 @@ export interface NcfRango {
   created_at: string;
 }
 
+/**
+ * Serie interna de numeración (migración 007).
+ *
+ * Hay una fila por "scope": empeno, venta, compra_oro, pago, recibo,
+ * factura_interna. El dueño puede editar el prefijo, el formato y el
+ * reset anual desde `/config/numeraciones`. El contador y el año
+ * actual los gestiona `siguiente_numero()` — la UI no debe tocarlos
+ * directamente (romper esos valores causaría huecos o duplicados).
+ *
+ * Placeholders del `formato`: `{prefijo}`, `{año}` / `{YYYY}`,
+ * `{numero}` / `{NNNNN}`.
+ */
+export interface NumeracionSerie {
+  id: string;
+  scope: string;
+  etiqueta: string;
+  prefijo: string;
+  ancho_secuencia: number;
+  reset_anual: boolean;
+  formato: string;
+  año_actual: number;
+  contador: number;
+  activa: boolean;
+  descripcion: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Fila de `v_resumen_numeraciones` — unifica series internas y rangos
+ * NCF en una sola forma para la página de configuración.
+ * Los campos específicos de NCF son `null` cuando `categoria = 'interna'`
+ * y viceversa.
+ */
+export interface ResumenNumeracion {
+  categoria: "interna" | "ncf";
+  scope: string;
+  etiqueta: string;
+  prefijo: string;
+  año_actual: number | null;
+  ultimo_numero: number;
+  proximo_numero: number;
+  rango_disponible: number | null;
+  proxima_expiracion: string | null;
+  activa: boolean;
+  reset_anual: boolean | null;
+  formato: string | null;
+  ncf_estado: EstadoRangoNcf | null;
+}
+
 export interface PrecioOro {
   id: string;
   fecha: string;
@@ -340,6 +533,14 @@ export interface CompraOro {
   fotos_urls: string[];
   recibido_por: string | null;
   notas: string | null;
+  /**
+   * true = el oro todavía está en stock (no se procesó ni vendió).
+   * false = ya fue convertido a pieza de joyería o vendido.
+   * Columna agregada en migración 010 — un trigger la actualiza
+   * automáticamente cuando se inserta en `piezas_joyeria` con
+   * `origen='compra_oro'`.
+   */
+  oro_disponible: boolean;
   created_at: string;
 }
 
@@ -463,8 +664,15 @@ export interface Database {
       facturas: Table<Factura>;
       factura_items: Table<FacturaItem>;
       ncf_rangos: Table<NcfRango>;
+      numeracion_series: Table<NumeracionSerie>;
+      reportes_dgii_generados: Table<ReporteDgiiGenerado>;
+      gastos_operativos: Table<GastoOperativo>;
+      spot_metales_diario: Table<SpotMetalesDiario>;
     };
-    Views: Record<string, never>;
+    Views: {
+      v_resumen_numeraciones: { Row: ResumenNumeracion };
+      v_libro_compraventa: { Row: LibroCompraventaRow };
+    };
     Functions: {
       generar_codigo_prestamo: { Args: Record<string, never>; Returns: string };
       generar_codigo_compra_oro: { Args: Record<string, never>; Returns: string };
@@ -474,6 +682,8 @@ export interface Database {
       generar_codigo_recibo: { Args: Record<string, never>; Returns: string };
       generar_codigo_factura: { Args: Record<string, never>; Returns: string };
       obtener_proximo_ncf: { Args: { p_tipo: TipoComprobante }; Returns: string };
+      siguiente_numero: { Args: { p_scope: string }; Returns: string };
+      marcar_rangos_ncf_vencidos: { Args: Record<string, never>; Returns: number };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

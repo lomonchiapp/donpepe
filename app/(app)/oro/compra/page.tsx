@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { FadeIn } from "@/components/motion/fade-in";
 import { FlujoCompraOro } from "@/components/oro/flujo-compra";
+import { TarjetaSpotInternacional } from "@/components/oro/tarjeta-spot-internacional";
 import { createClient } from "@/lib/supabase/server";
 import { KILATAJES, type Kilataje } from "@/lib/calc/oro";
 import type { Cliente, PrecioOro } from "@/lib/supabase/types";
@@ -57,6 +58,10 @@ export default async function CompraOroPage({ searchParams }: Props) {
           Compra directa — sin empeño. Pagamos el precio del día por kilataje.
         </p>
       </FadeIn>
+      <div className="mb-5">
+        <TarjetaSpotInternacional />
+      </div>
+
       <FlujoCompraOro
         cliente_preseleccionado={cliente}
         precios_oro={preciosOro}

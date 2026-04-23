@@ -4,17 +4,15 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
-import type { EstadoRangoNcf } from "@/lib/supabase/types";
+import { TIPOS_COMPROBANTE } from "@/lib/facturacion/tipos-comprobante";
+import type { EstadoRangoNcf, TipoComprobante } from "@/lib/supabase/types";
 
-const TIPO_COMPROBANTE = z.enum([
-  "factura_credito_fiscal",
-  "factura_consumo",
-  "nota_debito",
-  "nota_credito",
-  "compra",
-  "regimen_especial",
-  "gubernamental",
-]);
+// Zod.enum requiere una tupla literal no-vacía. Hacemos el cast explícito al
+// generar la tupla desde el catálogo canónico — así no hay que mantener la
+// lista en dos lugares (enum TS + schema Zod).
+const TIPO_COMPROBANTE = z.enum(
+  TIPOS_COMPROBANTE as [TipoComprobante, ...TipoComprobante[]],
+);
 
 const CargarRangoSchema = z
   .object({

@@ -171,3 +171,27 @@ export function sugerirMontoPrestamo(
   const raw = valor_tasado * porcentaje;
   return Math.floor(raw / 100) * 100;
 }
+
+/**
+ * Tasa de interés mensual según el monto prestado — política vigente de
+ * la compraventa:
+ *
+ *   Monto (RD$)        | Interés mensual
+ *   ------------------ | ---------------
+ *   ≤ 5,000            | 10%
+ *   5,001 – 49,999     | 5%
+ *   ≥ 50,000           | 4%
+ *
+ * La tabla original del dueño lista 5k→10%, 10k/15k/…/40k→5%, 50k→4%.
+ * El rango 40,001–49,999 no aparece en la tabla; lo tratamos como 5%
+ * porque el escalón del 4% solo aplica desde 50k.
+ *
+ * Retorna la tasa como decimal (0.10, 0.05, 0.04). Un `monto <= 0`
+ * devuelve 0 — el caller debe tratar eso como "aún no definido".
+ */
+export function calcularTasaInteres(monto_prestado: number): number {
+  if (!Number.isFinite(monto_prestado) || monto_prestado <= 0) return 0;
+  if (monto_prestado <= 5000) return 0.1;
+  if (monto_prestado >= 50000) return 0.04;
+  return 0.05;
+}

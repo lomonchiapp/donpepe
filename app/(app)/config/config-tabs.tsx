@@ -8,9 +8,11 @@ import {
   Building2,
   Coins,
   FileStack,
+  Hash,
   Receipt,
   Scale,
   User,
+  UsersRound,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -19,18 +21,22 @@ const TABS: Array<{
   href: string;
   label: string;
   icon: typeof Building2;
+  soloAdmin?: boolean;
 }> = [
   { href: "/config/general", label: "General", icon: Building2 },
   { href: "/config/perfil", label: "Mi perfil", icon: User },
+  { href: "/config/usuarios", label: "Usuarios", icon: UsersRound, soloAdmin: true },
   { href: "/config/empenos", label: "Empeños", icon: Scale },
   { href: "/config/oro", label: "Oro", icon: Coins },
   { href: "/config/facturacion", label: "Facturación", icon: Receipt },
+  { href: "/config/numeraciones", label: "Numeraciones", icon: Hash },
   { href: "/config/ncf", label: "Rangos NCF", icon: FileStack },
   { href: "/config/alertas", label: "Alertas", icon: Bell },
 ];
 
-export function ConfigTabs() {
+export function ConfigTabs({ esAdmin = false }: { esAdmin?: boolean }) {
   const pathname = usePathname();
+  const tabsVisibles = TABS.filter((t) => !t.soloAdmin || esAdmin);
 
   return (
     <nav
@@ -38,7 +44,7 @@ export function ConfigTabs() {
       className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0"
     >
       <ul className="flex min-w-max gap-1.5 border-b md:gap-2">
-        {TABS.map((tab) => {
+        {tabsVisibles.map((tab) => {
           const active =
             pathname === tab.href ||
             (pathname.startsWith(`${tab.href}/`) && tab.href !== "/config");

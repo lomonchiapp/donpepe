@@ -139,8 +139,19 @@ export function FlujoCompraOro({ cliente_preseleccionado, precios_oro }: Props) 
     if (notas) fd.set("notas", notas);
 
     startTransition(async () => {
-      const res = await registrarCompraOro(fd);
-      if (res && "error" in res && res.error) toast.error(res.error);
+      try {
+        const res = await registrarCompraOro(fd);
+        if (res && "error" in res && res.error) toast.error(res.error);
+      } catch (e) {
+        // `redirect()` en la server action lanza; no es un fallo real del formulario.
+        const digest =
+          typeof e === "object" && e !== null && "digest" in e
+            ? String((e as { digest?: unknown }).digest)
+            : "";
+        if (digest.startsWith("NEXT_REDIRECT")) return;
+        console.error(e);
+        toast.error("No se pudo completar la compra. Intentá de nuevo.");
+      }
     });
   }
 

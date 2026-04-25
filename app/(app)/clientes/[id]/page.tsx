@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { BotonEliminarCliente } from "@/components/cliente/boton-eliminar";
+import { CompraOroClienteFeedback } from "@/components/oro/compra-oro-cliente-feedback";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import {
@@ -46,6 +47,7 @@ export default async function ClientePage({
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-6 md:px-8 md:py-8">
+      <CompraOroClienteFeedback />
       <Link
         href="/clientes"
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"

@@ -138,9 +138,17 @@ export async function crearPagoConRecibo(
     .single();
 
   if (errPago || !pagoData) {
+    const raw = errPago?.message ?? "No se pudo registrar el pago";
+    const lower = raw.toLowerCase();
+    const hintNumeracion =
+      lower.includes("serie de numeración") ||
+      lower.includes("numeración no configurada") ||
+      lower.includes("p0002");
     return {
       ok: false,
-      error: errPago?.message ?? "No se pudo registrar el pago",
+      error: hintNumeracion
+        ? `${raw} Revisá Configuración → Numeraciones (serie “pago”). Si ya está, ejecutá en Supabase la migración SQL \`011_numeracion_siguiente_definer.sql\` del repo.`
+        : raw,
     };
   }
   const pago = pagoData as { id: string; codigo: string };
@@ -168,9 +176,17 @@ export async function crearPagoConRecibo(
     // Rollback best-effort: si no podemos borrar el pago el caller se
     // entera por el mensaje; queda huérfano pero visible en /pagos.
     await supabase.from("pagos").delete().eq("id", pago.id);
+    const raw = errRecibo?.message ?? "No se pudo emitir el recibo";
+    const lower = raw.toLowerCase();
+    const hintNumeracion =
+      lower.includes("serie de numeración") ||
+      lower.includes("numeración no configurada") ||
+      lower.includes("p0002");
     return {
       ok: false,
-      error: errRecibo?.message ?? "No se pudo emitir el recibo",
+      error: hintNumeracion
+        ? `${raw} Revisá Configuración → Numeraciones (series “pago” y “recibo”). Si ya están, ejecutá en Supabase la migración SQL \`011_numeracion_siguiente_definer.sql\` del repo.`
+        : raw,
     };
   }
   const recibo = reciboData as { id: string; codigo: string };

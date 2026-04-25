@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { obtenerAppUserId } from "@/lib/supabase/current-user";
 import { KILATAJES } from "@/lib/calc/oro";
+import { formatearDOP } from "@/lib/format";
 import { crearPagoConRecibo } from "@/lib/pagos/crear";
 import type { Cliente, ReciboItem } from "@/lib/supabase/types";
 
@@ -107,11 +108,13 @@ export async function registrarCompraOro(formData: FormData) {
   const compraOro = data as { id: string };
 
   const concepto = `Compra de oro ${codigo} — ${d.peso_gramos}g ${d.kilataje}K`;
+  // Un ítem con monto = total pagado evita que subtotal del recibo difiera del
+  // pago cuando el operador negocia el total (peso × precio/g ≠ total).
   const items: ReciboItem[] = [
     {
-      descripcion: `Oro ${d.kilataje}K`,
-      cantidad: d.peso_gramos,
-      monto: d.precio_gramo,
+      descripcion: `Oro ${d.kilataje}K · ${d.peso_gramos} g (${formatearDOP(d.precio_gramo)}/g)`,
+      cantidad: 1,
+      monto: d.total_pagado,
     },
   ];
 
@@ -138,15 +141,18 @@ export async function registrarCompraOro(formData: FormData) {
     app_user_id: appUserId,
   });
 
-  if (!resultado.ok) {
-    return {
-      error: `Compra registrada pero falló el recibo: ${resultado.error}`,
-    };
-  }
-
   revalidatePath("/oro");
   revalidatePath("/recibos");
   revalidatePath("/pagos");
   revalidatePath("/");
-  redirect(`/clientes/${d.cliente_id}`);
+  revalidatePath("/inventario");
+  revalidatePath(`/clientes/${d.cliente_id}`);
+
+  // Siempre salimos del formulario: la compra ya está en `compras_oro`. Si el recibo
+  // falla, el usuario ve aviso en la ficha del cliente (?recibo_fallido=1).
+  if (!resultado.ok) {
+    redirect(`/clientes/${d.cliente_id}?compra_oro=ok&recibo_fallido=1`);
+  }
+
+  redirect(`/clientes/${d.cliente_id}?compra_oro=ok`);
 }

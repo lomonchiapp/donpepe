@@ -12,8 +12,9 @@ import type { SpotMetalesDiario } from "@/lib/supabase/types";
  * de compra, solo es una referencia para que el dueño negocie.
  *
  * Los precios se actualizan una vez al día vía cron desde
- * MetalpriceAPI (ver `/api/cron/spot-metales`). Si nunca se corrió
- * el cron, la tarjeta muestra un estado vacío con instrucciones.
+ * MetalpriceAPI (ver `/api/cron/spot-metales`). Si aún no hay
+ * datos del cron, la tarjeta no se renderiza — así no se ve el
+ * estado vacío descolorido que nadie puede leer.
  */
 export async function TarjetaSpotInternacional() {
   const supabase = await createClient();
@@ -26,6 +27,9 @@ export async function TarjetaSpotInternacional() {
 
   const spot = (data as SpotMetalesDiario | null) ?? null;
 
+  // Si aún no hay datos del cron, no renderizamos nada.
+  if (!spot) return null;
+
   return (
     <FadeIn delay={0.15}>
       <Card className="border-blue-500/30 bg-gradient-to-br from-blue-50 to-transparent dark:from-blue-950/20">
@@ -37,7 +41,7 @@ export async function TarjetaSpotInternacional() {
                 Spot internacional · referencia
               </h3>
             </div>
-            {spot?.fecha && (
+            {spot.fecha && (
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 {new Date(spot.fecha).toLocaleDateString("es-DO", {
                   day: "2-digit",
@@ -47,51 +51,38 @@ export async function TarjetaSpotInternacional() {
             )}
           </div>
 
-          {!spot ? (
-            <div className="rounded-md border border-dashed border-muted-foreground/30 p-3 text-xs text-muted-foreground">
-              Todavía no hay datos. El cron corre a las 9:00 AM RD. Si tu
-              admin configuró <code>METALPRICE_API_KEY</code> en Vercel,
-              mañana aparecerán aquí los precios de oro, plata, platino y
-              paladio. Estos valores son <strong>informativos</strong> —
-              los precios locales los fijas tú.
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                <Metal
-                  etiqueta="Oro 24K"
-                  dopG={spot.oro_24k_dop_gramo}
-                  usdOz={spot.oro_usd_oz}
-                  icon={<Coins className="h-3.5 w-3.5 text-amber-500" />}
-                />
-                <Metal
-                  etiqueta="Plata"
-                  dopG={spot.plata_dop_gramo}
-                  usdOz={spot.plata_usd_oz}
-                  icon={<Coins className="h-3.5 w-3.5 text-slate-400" />}
-                />
-                <Metal
-                  etiqueta="Platino"
-                  dopG={spot.platino_dop_gramo}
-                  usdOz={spot.platino_usd_oz}
-                  icon={<Coins className="h-3.5 w-3.5 text-zinc-300" />}
-                />
-                <Metal
-                  etiqueta="Paladio"
-                  dopG={spot.paladio_dop_gramo}
-                  usdOz={spot.paladio_usd_oz}
-                  icon={<Coins className="h-3.5 w-3.5 text-stone-400" />}
-                />
-              </div>
-              <p className="mt-3 text-[10px] text-muted-foreground">
-                Fuente: {spot.fuente} · USD/DOP{" "}
-                {spot.usd_dop != null ? Number(spot.usd_dop).toFixed(2) : "—"}.
-                Los precios locales que la casa paga siguen siendo los de
-                cada tarjeta de arriba — esto es solo la referencia
-                internacional.
-              </p>
-            </>
-          )}
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            <Metal
+              etiqueta="Oro 24K"
+              dopG={spot.oro_24k_dop_gramo}
+              usdOz={spot.oro_usd_oz}
+              icon={<Coins className="h-3.5 w-3.5 text-amber-500" />}
+            />
+            <Metal
+              etiqueta="Plata"
+              dopG={spot.plata_dop_gramo}
+              usdOz={spot.plata_usd_oz}
+              icon={<Coins className="h-3.5 w-3.5 text-slate-400" />}
+            />
+            <Metal
+              etiqueta="Platino"
+              dopG={spot.platino_dop_gramo}
+              usdOz={spot.platino_usd_oz}
+              icon={<Coins className="h-3.5 w-3.5 text-zinc-300" />}
+            />
+            <Metal
+              etiqueta="Paladio"
+              dopG={spot.paladio_dop_gramo}
+              usdOz={spot.paladio_usd_oz}
+              icon={<Coins className="h-3.5 w-3.5 text-stone-400" />}
+            />
+          </div>
+          <p className="mt-3 text-[10px] text-muted-foreground">
+            Fuente: {spot.fuente} · USD/DOP{" "}
+            {spot.usd_dop != null ? Number(spot.usd_dop).toFixed(2) : "—"}.
+            Los precios locales que la casa paga siguen siendo los de cada
+            tarjeta de arriba — esto es solo la referencia internacional.
+          </p>
         </CardContent>
       </Card>
     </FadeIn>

@@ -4,12 +4,28 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* =============================================================
+ * Don Pepe — Apple Design System
+ * Inspirado en macOS Sonoma + iOS 17/18.
+ *
+ * Capas:
+ *   1. Tokens semánticos (var(--background), var(--card), etc.)
+ *   2. Materiales translúcidos (vibrancy)        →  .material-*
+ *   3. Sombras jerárquicas Apple                 →  --shadow-*
+ *   4. Curvas de animación iOS                   →  --ease-*
+ *
+ * Conservamos nombres legacy (--gold, --wine, --cream, --wine-gradient,
+ * --gold-gradient) por compatibilidad con páginas existentes.
+ * Rebrandeados a paleta Apple — el oro pasa a champagne refinado y
+ * el vino a graphite (Big Sur), conservando jerarquía visual.
+ * ============================================================= */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-display);
 
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -43,7 +59,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
 
-  /* Marca Don Pepe */
+  /* Marca Don Pepe (rebrandeado Apple) */
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
   --color-wine: var(--wine);
@@ -54,138 +70,242 @@
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
 
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Radios Apple — escala iOS/macOS */
+  --radius-sm: calc(var(--radius) * 0.42);   /* ~6px  — chips, pills, toggles */
+  --radius-md: calc(var(--radius) * 0.71);   /* ~10px — botones, inputs */
+  --radius-lg: var(--radius);                /* ~14px — cards (iOS Settings) */
+  --radius-xl: calc(var(--radius) * 1.28);   /* ~18px — cards prominentes */
+  --radius-2xl: calc(var(--radius) * 1.57);  /* ~22px — sheets/modales iOS */
+  --radius-3xl: calc(var(--radius) * 2);     /* ~28px — superficies hero */
+  --radius-4xl: calc(var(--radius) * 2.57);  /* ~36px — cápsulas grandes */
 }
 
 :root {
-  /* Tema claro — cálido dominicano */
-  --background: oklch(0.986 0.008 85);         /* crema muy suave */
-  --foreground: oklch(0.185 0.028 40);         /* café oscuro */
+  /* ---------- Background & superficies (light) ---------- */
+  --background: oklch(0.967 0.002 286);        /* #F2F2F7 systemGroupedBackground */
+  --foreground: oklch(0.16 0.012 286);         /* near-black label */
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.185 0.028 40);
+  --card: oklch(1 0 0);                        /* white surface */
+  --card-foreground: oklch(0.16 0.012 286);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.185 0.028 40);
+  --popover-foreground: oklch(0.16 0.012 286);
 
-  --primary: oklch(0.38 0.14 25);              /* #7C1D1D rojo vino */
-  --primary-foreground: oklch(0.98 0.01 85);
+  /* ---------- Sistema iOS — tints & roles (light) ---------- */
+  --primary: oklch(0.598 0.197 256.5);         /* #007AFF System Blue */
+  --primary-foreground: oklch(1 0 0);
 
-  --secondary: oklch(0.94 0.035 85);           /* #F5E6C8 crema */
-  --secondary-foreground: oklch(0.25 0.05 40);
+  --secondary: oklch(0.94 0.004 286);          /* #EFEFF4 fill */
+  --secondary-foreground: oklch(0.16 0.012 286);
 
-  --muted: oklch(0.95 0.015 80);
-  --muted-foreground: oklch(0.5 0.03 60);
+  --muted: oklch(0.942 0.004 286);             /* tertiary fill */
+  --muted-foreground: oklch(0.55 0.012 286);   /* iOS secondaryLabel */
 
-  --accent: oklch(0.78 0.14 85);               /* #D4AF37 oro */
-  --accent-foreground: oklch(0.2 0.04 40);
+  --accent: oklch(0.685 0.072 70);             /* champagne refinado #B89968 */
+  --accent-foreground: oklch(0.18 0.04 70);
 
-  --destructive: oklch(0.55 0.21 27);          /* #C1272D rojo bandera */
+  --destructive: oklch(0.628 0.235 25);        /* #FF3B30 System Red */
 
-  --border: oklch(0.9 0.025 80);
-  --input: oklch(0.92 0.02 80);
-  --ring: oklch(0.78 0.14 85);
+  /* Hairlines iOS — 0.5px effect via low-opacity border */
+  --border: oklch(0.16 0.012 286 / 0.12);      /* iOS separator */
+  --input: oklch(0.16 0.012 286 / 0.16);
+  --ring: oklch(0.598 0.197 256.5);            /* halo azul system */
 
-  --chart-1: oklch(0.38 0.14 25);              /* vino */
-  --chart-2: oklch(0.78 0.14 85);              /* oro */
-  --chart-3: oklch(0.52 0.09 155);             /* verde */
-  --chart-4: oklch(0.62 0.15 65);              /* ámbar */
-  --chart-5: oklch(0.4 0.1 260);               /* azul profundo */
+  /* ---------- Charts — paleta sistema iOS ---------- */
+  --chart-1: oklch(0.598 0.197 256.5);         /* blue */
+  --chart-2: oklch(0.7 0.18 145);              /* green */
+  --chart-3: oklch(0.67 0.18 56);              /* orange */
+  --chart-4: oklch(0.58 0.215 309);            /* purple */
+  --chart-5: oklch(0.65 0.235 8);              /* pink */
 
+  /* Radio base — 14px (cards iOS) */
   --radius: 0.875rem;
 
-  --sidebar: oklch(0.975 0.015 80);
-  --sidebar-foreground: oklch(0.22 0.04 40);
-  --sidebar-primary: oklch(0.38 0.14 25);
-  --sidebar-primary-foreground: oklch(0.98 0.01 85);
-  --sidebar-accent: oklch(0.93 0.04 85);
-  --sidebar-accent-foreground: oklch(0.22 0.04 40);
-  --sidebar-border: oklch(0.9 0.025 80);
-  --sidebar-ring: oklch(0.78 0.14 85);
+  /* ---------- Sidebar (vibrancy macOS) ---------- */
+  --sidebar: oklch(0.97 0.002 286);            /* base bajo el material */
+  --sidebar-foreground: oklch(0.18 0.012 286);
+  --sidebar-primary: oklch(0.598 0.197 256.5);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.598 0.197 256.5 / 0.13);   /* tinted pill */
+  --sidebar-accent-foreground: oklch(0.598 0.197 256.5);
+  --sidebar-border: oklch(0.16 0.012 286 / 0.08);
+  --sidebar-ring: oklch(0.598 0.197 256.5);
 
-  /* Tokens de marca */
-  --gold: oklch(0.78 0.14 85);                 /* #D4AF37 */
-  --gold-foreground: oklch(0.2 0.04 40);
-  --wine: oklch(0.38 0.14 25);                 /* #7C1D1D */
-  --wine-foreground: oklch(0.98 0.01 85);
-  --cream: oklch(0.94 0.035 85);               /* #F5E6C8 */
-  --success: oklch(0.52 0.09 155);             /* #2D6A4F */
-  --success-foreground: oklch(0.98 0.01 85);
-  --warning: oklch(0.75 0.15 70);              /* ámbar */
-  --warning-foreground: oklch(0.2 0.04 40);
+  /* ---------- Tokens de marca rebrandeados ---------- */
+  --gold: oklch(0.685 0.072 70);               /* champagne (mismo que accent) */
+  --gold-foreground: oklch(0.18 0.04 70);
+  --wine: oklch(0.27 0.025 256);               /* graphite Big Sur */
+  --wine-foreground: oklch(0.97 0.005 286);
+  --cream: oklch(0.94 0.004 286);              /* secondary system fill */
+  --success: oklch(0.7 0.18 145);              /* #34C759 System Green */
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.731 0.181 56);            /* #FF9500 System Orange */
+  --warning-foreground: oklch(0.18 0.04 56);
+
+  /* ---------- Materiales (vibrancy macOS/iOS) ---------- */
+  --material-thin: oklch(1 0 0 / 0.55);
+  --material-regular: oklch(1 0 0 / 0.72);
+  --material-thick: oklch(1 0 0 / 0.85);
+  --material-chrome: oklch(0.97 0.002 286 / 0.78);
+  --material-blur: saturate(180%) blur(20px);
+  --material-blur-thin: saturate(160%) blur(14px);
+  --material-blur-thick: saturate(180%) blur(40px);
+
+  /* ---------- Sombras jerárquicas Apple ---------- */
+  --shadow-hairline:
+    0 0 0 0.5px oklch(0.16 0.012 286 / 0.06);
+  --shadow-card:
+    0 1px 2px oklch(0.16 0.012 286 / 0.04),
+    0 4px 16px oklch(0.16 0.012 286 / 0.04);
+  --shadow-elevated:
+    0 1px 3px oklch(0.16 0.012 286 / 0.06),
+    0 8px 24px oklch(0.16 0.012 286 / 0.07);
+  --shadow-floating:
+    0 4px 12px oklch(0.16 0.012 286 / 0.08),
+    0 24px 48px oklch(0.16 0.012 286 / 0.12);
+  --shadow-pop:
+    0 8px 24px oklch(0.16 0.012 286 / 0.12),
+    0 32px 64px oklch(0.16 0.012 286 / 0.16);
+
+  /* ---------- Curvas de animación iOS ---------- */
+  --ease-ios:        cubic-bezier(0.32, 0.72, 0, 1);    /* sheet present */
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --ease-standard:   cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Stack tipográfico Apple — SF nativo en macOS/iOS, Inter como fallback */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont,
+    "SF Pro Text", "SF Pro Display",
+    "Inter", var(--font-fallback, "Helvetica Neue"),
+    Helvetica, Arial, system-ui, sans-serif;
+  --font-display:
+    -apple-system, BlinkMacSystemFont,
+    "SF Pro Display", "SF Pro Text",
+    "Inter", var(--font-fallback, "Helvetica Neue"),
+    Helvetica, Arial, system-ui, sans-serif;
+  --font-mono:
+    "SF Mono", ui-monospace, "JetBrains Mono",
+    Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 .dark {
-  --background: oklch(0.16 0.02 40);           /* #1A0F0A café oscuro */
-  --foreground: oklch(0.96 0.02 85);
-  --card: oklch(0.22 0.03 35);
-  --card-foreground: oklch(0.96 0.02 85);
-  --popover: oklch(0.22 0.03 35);
-  --popover-foreground: oklch(0.96 0.02 85);
+  /* ---------- Background & superficies (dark) ---------- */
+  --background: oklch(0 0 0);                  /* true black (OLED) */
+  --foreground: oklch(0.985 0 0);
 
-  --primary: oklch(0.82 0.15 85);              /* oro como primario en dark */
-  --primary-foreground: oklch(0.2 0.04 40);
+  --card: oklch(0.196 0.002 286);              /* #1C1C1E secondarySystemGroupedBackground */
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.252 0.003 286);           /* #2C2C2E elevated */
+  --popover-foreground: oklch(0.985 0 0);
 
-  --secondary: oklch(0.3 0.05 30);
-  --secondary-foreground: oklch(0.96 0.02 85);
+  /* ---------- Tints & roles (dark) ---------- */
+  --primary: oklch(0.621 0.196 257);           /* #0A84FF System Blue dark */
+  --primary-foreground: oklch(1 0 0);
 
-  --muted: oklch(0.25 0.03 35);
-  --muted-foreground: oklch(0.7 0.03 80);
+  --secondary: oklch(0.252 0.003 286);         /* #2C2C2E secondary fill */
+  --secondary-foreground: oklch(0.985 0 0);
 
-  --accent: oklch(0.5 0.16 25);                /* vino en dark */
-  --accent-foreground: oklch(0.98 0.01 85);
+  --muted: oklch(0.225 0.003 286);
+  --muted-foreground: oklch(0.985 0 0 / 0.6);  /* iOS secondaryLabel dark */
 
-  --destructive: oklch(0.65 0.2 27);
+  --accent: oklch(0.768 0.07 75);              /* champagne más claro en dark */
+  --accent-foreground: oklch(0.16 0.012 286);
 
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.78 0.14 85);
+  --destructive: oklch(0.66 0.22 22);          /* #FF453A */
 
-  --chart-1: oklch(0.82 0.15 85);
-  --chart-2: oklch(0.55 0.16 25);
-  --chart-3: oklch(0.65 0.12 155);
-  --chart-4: oklch(0.72 0.15 65);
-  --chart-5: oklch(0.55 0.12 260);
+  --border: oklch(1 0 0 / 0.09);               /* iOS separator dark — alpha sobre negro */
+  --input: oklch(1 0 0 / 0.13);
+  --ring: oklch(0.621 0.196 257);
 
-  --sidebar: oklch(0.2 0.03 35);
-  --sidebar-foreground: oklch(0.96 0.02 85);
-  --sidebar-primary: oklch(0.82 0.15 85);
-  --sidebar-primary-foreground: oklch(0.2 0.04 40);
-  --sidebar-accent: oklch(0.28 0.04 30);
-  --sidebar-accent-foreground: oklch(0.96 0.02 85);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.78 0.14 85);
+  --chart-1: oklch(0.621 0.196 257);
+  --chart-2: oklch(0.74 0.19 145);
+  --chart-3: oklch(0.78 0.17 56);
+  --chart-4: oklch(0.65 0.215 309);
+  --chart-5: oklch(0.7 0.23 8);
 
-  --gold: oklch(0.82 0.15 85);
-  --gold-foreground: oklch(0.2 0.04 40);
-  --wine: oklch(0.5 0.16 25);
-  --wine-foreground: oklch(0.98 0.01 85);
-  --cream: oklch(0.3 0.05 30);
-  --success: oklch(0.65 0.12 155);
-  --success-foreground: oklch(0.1 0.02 155);
-  --warning: oklch(0.78 0.16 70);
-  --warning-foreground: oklch(0.2 0.04 40);
+  --sidebar: oklch(0.07 0.002 286);            /* near-black con respiración */
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.621 0.196 257);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.621 0.196 257 / 0.18);
+  --sidebar-accent-foreground: oklch(0.78 0.13 257);
+  --sidebar-border: oklch(1 0 0 / 0.07);
+  --sidebar-ring: oklch(0.621 0.196 257);
+
+  --gold: oklch(0.768 0.07 75);
+  --gold-foreground: oklch(0.16 0.012 286);
+  --wine: oklch(0.16 0.018 256);               /* midnight graphite */
+  --wine-foreground: oklch(0.985 0 0);
+  --cream: oklch(0.252 0.003 286);
+  --success: oklch(0.74 0.19 145);
+  --success-foreground: oklch(0.1 0.04 145);
+  --warning: oklch(0.78 0.17 56);
+  --warning-foreground: oklch(0.16 0.04 56);
+
+  --material-thin: oklch(0.196 0.002 286 / 0.55);
+  --material-regular: oklch(0.196 0.002 286 / 0.72);
+  --material-thick: oklch(0.196 0.002 286 / 0.88);
+  --material-chrome: oklch(0.07 0.002 286 / 0.8);
+
+  --shadow-hairline:
+    inset 0 0 0 0.5px oklch(1 0 0 / 0.06);
+  --shadow-card:
+    0 1px 2px oklch(0 0 0 / 0.4),
+    0 4px 16px oklch(0 0 0 / 0.3),
+    inset 0 0 0 0.5px oklch(1 0 0 / 0.04);
+  --shadow-elevated:
+    0 1px 3px oklch(0 0 0 / 0.5),
+    0 8px 24px oklch(0 0 0 / 0.4),
+    inset 0 0 0 0.5px oklch(1 0 0 / 0.05);
+  --shadow-floating:
+    0 4px 12px oklch(0 0 0 / 0.5),
+    0 24px 48px oklch(0 0 0 / 0.5),
+    inset 0 0 0 0.5px oklch(1 0 0 / 0.06);
+  --shadow-pop:
+    0 8px 24px oklch(0 0 0 / 0.55),
+    0 32px 64px oklch(0 0 0 / 0.6),
+    inset 0 0 0 0.5px oklch(1 0 0 / 0.07);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+  }
+  *:focus-visible {
+    outline: none;
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    font-feature-settings:
+      "rlig" 1,    /* required ligatures */
+      "calt" 1,    /* contextual alts */
+      "ss01" 1,    /* SF stylistic set 1 (rounded i / l) */
+      "cv11" 1,    /* SF single-storey a (humanist) */
+      "kern" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.005em;
   }
   html {
     @apply font-sans antialiased;
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Hit area grande para móvil */
+  /* Display headings — tracking apretado al estilo SF Pro Display */
+  h1, h2, h3 {
+    letter-spacing: -0.022em;
+  }
+  h4, h5 {
+    letter-spacing: -0.014em;
+  }
+
+  /* Numerales tabulares por defecto — montos siempre alineados */
+  [data-tabular="true"],
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "ss01" 1;
+  }
+
   button,
   a,
   [role="button"] {
@@ -194,27 +314,100 @@
 }
 
 @layer utilities {
-  .gold-gradient {
-    background: linear-gradient(135deg, oklch(0.85 0.14 90) 0%, oklch(0.72 0.14 80) 50%, oklch(0.85 0.14 90) 100%);
+  /* ---------- Materiales / vibrancy ---------- */
+  .material-thin {
+    background-color: var(--material-thin);
+    backdrop-filter: var(--material-blur-thin);
+    -webkit-backdrop-filter: var(--material-blur-thin);
   }
-  .wine-gradient {
-    background: linear-gradient(135deg, oklch(0.42 0.14 25) 0%, oklch(0.34 0.13 20) 100%);
-  }
+  .material-regular,
   .glass {
-    backdrop-filter: blur(12px) saturate(1.4);
-    -webkit-backdrop-filter: blur(12px) saturate(1.4);
-    background-color: color-mix(in oklch, var(--card) 70%, transparent);
+    background-color: var(--material-regular);
+    backdrop-filter: var(--material-blur);
+    -webkit-backdrop-filter: var(--material-blur);
   }
+  .material-thick {
+    background-color: var(--material-thick);
+    backdrop-filter: var(--material-blur-thick);
+    -webkit-backdrop-filter: var(--material-blur-thick);
+  }
+  .material-chrome {
+    /* Para barras de navegación */
+    background-color: var(--material-chrome);
+    backdrop-filter: var(--material-blur);
+    -webkit-backdrop-filter: var(--material-blur);
+  }
+
+  /* ---------- Gradientes legacy rebrandeados ---------- */
+  .wine-gradient {
+    /* Graphite Big Sur — para hero cards, FAB, login emblem */
+    background:
+      radial-gradient(120% 100% at 0% 0%, oklch(0.32 0.04 256) 0%, transparent 60%),
+      linear-gradient(135deg,
+        oklch(0.27 0.025 256) 0%,
+        oklch(0.193 0.038 256) 60%,
+        oklch(0.14 0.038 268) 100%);
+  }
+  .dark .wine-gradient {
+    background:
+      radial-gradient(120% 100% at 0% 0%, oklch(0.22 0.04 256) 0%, transparent 60%),
+      linear-gradient(135deg,
+        oklch(0.16 0.025 256) 0%,
+        oklch(0.1 0.024 268) 60%,
+        oklch(0.05 0.018 268) 100%);
+  }
+  .gold-gradient {
+    /* Champagne aluminum — Apple Hardware metallic */
+    background:
+      linear-gradient(135deg,
+        oklch(0.86 0.05 80) 0%,
+        oklch(0.78 0.075 75) 25%,
+        oklch(0.66 0.08 65) 55%,
+        oklch(0.78 0.075 75) 80%,
+        oklch(0.88 0.05 85) 100%);
+  }
+  .dark .gold-gradient {
+    background:
+      linear-gradient(135deg,
+        oklch(0.82 0.06 80) 0%,
+        oklch(0.74 0.08 75) 30%,
+        oklch(0.62 0.075 65) 60%,
+        oklch(0.78 0.075 80) 100%);
+  }
+
+  /* ---------- Sombras Apple ---------- */
+  .shadow-card     { box-shadow: var(--shadow-card); }
+  .shadow-elevated { box-shadow: var(--shadow-elevated); }
+  .shadow-floating { box-shadow: var(--shadow-floating); }
+  .shadow-pop      { box-shadow: var(--shadow-pop); }
+  .shadow-hairline { box-shadow: var(--shadow-hairline); }
+
+  /* Halo iOS focus ring (4px tinted) */
+  .ring-ios-focus {
+    box-shadow: 0 0 0 4px oklch(from var(--ring) l c h / 0.28);
+  }
+
+  /* ---------- Press state iOS (active scale) ---------- */
+  .press-ios {
+    transition: transform 120ms var(--ease-ios), opacity 120ms var(--ease-ios);
+  }
+  .press-ios:active {
+    transform: scale(0.97);
+    opacity: 0.7;
+  }
+
+  /* ---------- Shimmer (skeleton) ---------- */
   .shimmer {
     background: linear-gradient(
       90deg,
       transparent,
-      color-mix(in oklch, var(--foreground) 8%, transparent),
+      color-mix(in oklch, var(--foreground) 6%, transparent),
       transparent
     );
     background-size: 200% 100%;
-    animation: shimmer 1.6s infinite;
+    animation: shimmer 1.6s var(--ease-standard) infinite;
   }
+
   .no-tap-highlight {
     -webkit-tap-highlight-color: transparent;
   }
@@ -224,19 +417,50 @@
   .safe-top {
     padding-top: max(env(safe-area-inset-top), 0.5rem);
   }
+
+  /* ---------- Hairline divider iOS-style (insets desde icon) ---------- */
+  .hairline-divider {
+    background:
+      linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(2.75rem + 12px),
+        oklch(from var(--foreground) l c h / 0.12) calc(2.75rem + 12px),
+        oklch(from var(--foreground) l c h / 0.12) 100%
+      );
+    height: 0.5px;
+  }
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
+  0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
 @keyframes pulse-gold {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--gold) 50%, transparent); }
-  50% { box-shadow: 0 0 0 8px color-mix(in oklch, var(--gold) 0%, transparent); }
+  50%      { box-shadow: 0 0 0 8px color-mix(in oklch, var(--gold) 0%, transparent); }
 }
 
 @keyframes pulse-danger {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--destructive) 55%, transparent); }
-  50% { box-shadow: 0 0 0 10px color-mix(in oklch, var(--destructive) 0%, transparent); }
+  50%      { box-shadow: 0 0 0 10px color-mix(in oklch, var(--destructive) 0%, transparent); }
+}
+
+/* ============================================================
+ * Print — preserva las views imprimibles (recibos, facturas)
+ * con fondo blanco y estilos predecibles.
+ * ============================================================ */
+@media print {
+  :root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0 0 0);
+    --card: oklch(1 0 0);
+    --border: oklch(0 0 0 / 0.2);
+  }
+  body { background: white; color: black; }
+  .no-print, nav, aside, header[role="banner"] { display: none !important; }
+  .shadow-card, .shadow-elevated, .shadow-floating, .shadow-pop {
+    box-shadow: none !important;
+  }
 }

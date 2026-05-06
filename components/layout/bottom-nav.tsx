@@ -65,6 +65,11 @@ interface BottomNavProps {
   modulosPermitidos: string[];
 }
 
+/**
+ * Tab Bar iOS — translúcido (vibrancy material), hairline top, tinted icon
+ * cuando está activo. La pill animada es opcional pero le da el toque de
+ * iOS 18 (tinted background bajo el icono activo).
+ */
 export function BottomNav({ esAdmin, modulosPermitidos }: BottomNavProps) {
   const pathname = usePathname();
 
@@ -79,8 +84,15 @@ export function BottomNav({ esAdmin, modulosPermitidos }: BottomNavProps) {
   if (visibles.length === 0) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur-md md:hidden safe-bottom">
-      <ul className="flex items-stretch justify-around px-1 pt-1">
+    <nav
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-40 md:hidden safe-bottom",
+        "material-chrome",
+        // Hairline top — 0.5px effect via box-shadow
+        "shadow-[inset_0_0.5px_0_oklch(from_var(--foreground)_l_c_h/0.12)]",
+      )}
+    >
+      <ul className="flex items-stretch justify-around px-1 pt-1.5 pb-1">
         {visibles.map((tab) => {
           const active = tab.match(pathname);
           const Icon = tab.icon;
@@ -89,20 +101,26 @@ export function BottomNav({ esAdmin, modulosPermitidos }: BottomNavProps) {
               <Link
                 href={tab.href}
                 className={cn(
-                  "relative flex flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium transition-colors no-tap-highlight",
-                  active ? "text-primary" : "text-muted-foreground",
+                  "relative flex flex-col items-center justify-center gap-0.5",
+                  "px-2 py-1.5 rounded-[10px]",
+                  "text-[10.5px] font-[590] tracking-[-0.005em]",
+                  "transition-colors duration-150 no-tap-highlight press-ios",
+                  active ? "text-primary" : "text-muted-foreground/90",
                 )}
                 aria-current={active ? "page" : undefined}
               >
                 {active && (
                   <motion.span
                     layoutId="bottom-nav-pill"
-                    className="absolute inset-x-4 top-1 h-0.5 rounded-full bg-primary"
-                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    className="absolute inset-x-3 inset-y-1 -z-0 rounded-[10px] bg-primary/[0.13] dark:bg-primary/[0.2]"
+                    transition={{ type: "spring", stiffness: 420, damping: 30 }}
                   />
                 )}
-                <Icon className={cn("h-5 w-5", active && "fill-primary/10")} strokeWidth={active ? 2.4 : 1.8} />
-                <span>{tab.label}</span>
+                <Icon
+                  className={cn("relative z-10 h-[22px] w-[22px]", active && "drop-shadow-[0_0_0.5px_currentColor]")}
+                  strokeWidth={active ? 2.2 : 1.7}
+                />
+                <span className="relative z-10">{tab.label}</span>
               </Link>
             </li>
           );

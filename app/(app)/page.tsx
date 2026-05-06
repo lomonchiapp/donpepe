@@ -4,14 +4,18 @@ import { ArrowRight, TrendingUp, AlertTriangle, Coins, FileText } from "lucide-r
 import { FadeIn } from "@/components/motion/fade-in";
 import { Counter } from "@/components/motion/counter";
 import { Card, CardContent } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  ListGroup,
+  ListRow,
+  ListSection,
+  SettingsGlyph,
+} from "@/components/ui/list-group";
 import { createClient } from "@/lib/supabase/server";
 import {
   formatearDOP,
   formatearFechaCorta,
   pluralizar,
-  relativoDias,
   saludoDelDia,
 } from "@/lib/format";
 import {
@@ -75,131 +79,147 @@ export default async function InicioPage() {
   const { capital, activosCount, venceHoy, oroComprado, propiedadCasa } = await fetchKpis();
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-8">
+    <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-8 md:py-10 space-y-7">
       <FadeIn>
-        <header className="mb-6 md:mb-8">
-          <p className="text-sm text-muted-foreground">
+        <header>
+          <p className="text-[13px] text-muted-foreground tracking-[-0.005em]">
             {saludoDelDia()}, {formatearFechaCorta(new Date())}
           </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">
+          <h1 className="mt-1 text-[28px] md:text-[34px] font-[700] leading-[1.05] tracking-[-0.026em]">
             Don Pepe
           </h1>
         </header>
       </FadeIn>
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-        <KpiCard
-          delay={0.05}
-          icon={<FileText className="h-4 w-4" />}
-          tone="wine"
-          titulo="Capital prestado"
-          valor={<Counter value={capital} moneda />}
-          detalle={`${activosCount} ${pluralizar(activosCount, "empeño", "empeños")} activos`}
-        />
-        <KpiCard
-          delay={0.1}
-          icon={<AlertTriangle className="h-4 w-4" />}
-          tone="warning"
-          titulo="Vence hoy"
-          valor={<Counter value={venceHoy.length} />}
-          detalle="Revisar y avisar"
-        />
-        <KpiCard
-          delay={0.15}
-          icon={<Coins className="h-4 w-4" />}
-          tone="gold"
-          titulo="Oro comprado hoy"
-          valor={<Counter value={oroComprado} moneda />}
-          detalle="Compras directas"
-        />
-        <KpiCard
-          delay={0.2}
-          icon={<TrendingUp className="h-4 w-4" />}
-          tone="success"
-          titulo="Propiedad casa"
-          valor={<Counter value={propiedadCasa} />}
-          detalle="Listos para vender"
-        />
-      </section>
-
-      <FadeIn delay={0.25} className="mt-6 grid gap-3 md:mt-8 md:grid-cols-2 md:gap-4">
-        <AccesoRapido
-          href="/empenos/nuevo"
-          titulo="Nuevo empeño"
-          descripcion="Crear un ticket de préstamo en 3 pasos."
-          tone="wine"
-        />
-        <AccesoRapido
-          href="/inventario"
-          titulo="Nueva venta"
-          descripcion="Elige un artículo del inventario para vender."
-          tone="gold"
-        />
+      {/* KPI section — iOS dashboard style */}
+      <FadeIn delay={0.05}>
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <KpiCard
+            icon={<FileText className="h-[15px] w-[15px]" />}
+            tone="blue"
+            titulo="Capital prestado"
+            valor={<Counter value={capital} moneda />}
+            detalle={`${activosCount} ${pluralizar(activosCount, "empeño", "empeños")} activos`}
+          />
+          <KpiCard
+            icon={<AlertTriangle className="h-[15px] w-[15px]" />}
+            tone="orange"
+            titulo="Vence hoy"
+            valor={<Counter value={venceHoy.length} />}
+            detalle="Revisar y avisar"
+          />
+          <KpiCard
+            icon={<Coins className="h-[15px] w-[15px]" />}
+            tone="gold"
+            titulo="Oro comprado hoy"
+            valor={<Counter value={oroComprado} moneda />}
+            detalle="Compras directas"
+          />
+          <KpiCard
+            icon={<TrendingUp className="h-[15px] w-[15px]" />}
+            tone="green"
+            titulo="Propiedad casa"
+            valor={<Counter value={propiedadCasa} />}
+            detalle="Listos para vender"
+          />
+        </section>
       </FadeIn>
 
-      <FadeIn delay={0.3} className="mt-8">
-        <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold">Vence hoy o antes</h2>
-          <Link
-            href="/empenos?filtro=vencidos"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "gap-1")}
-          >
-            Ver todo <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
+      {/* Acciones rápidas — iOS Settings style sin perder los gradientes brand */}
+      <FadeIn delay={0.12}>
+        <ListSection title="Acciones rápidas">
+          <div className="grid gap-3 md:grid-cols-2">
+            <AccesoRapido
+              href="/empenos/nuevo"
+              titulo="Nuevo empeño"
+              descripcion="Crear un ticket de préstamo en 3 pasos."
+              tone="graphite"
+            />
+            <AccesoRapido
+              href="/inventario"
+              titulo="Nueva venta"
+              descripcion="Elige un artículo del inventario para vender."
+              tone="champagne"
+            />
+          </div>
+        </ListSection>
+      </FadeIn>
 
-        {venceHoy.length === 0 ? (
-          <Card>
-            <CardContent className="py-10 text-center">
-              <p className="text-sm text-muted-foreground">
-                🎉 No hay empeños venciendo hoy.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {venceHoy.map((p) => {
-              const dias = diasHastaVencimiento(p.fecha_vencimiento);
-              const estado = semaforoVencimiento(p.fecha_vencimiento);
-              const cliente = p.clientes?.nombre_completo ?? "Cliente";
-              const descripcion = p.articulos?.descripcion ?? "Artículo";
-              return (
-                <li key={p.id}>
-                  <Link href={`/empenos/${p.id}`} className="block">
-                    <Card className="transition-all hover:-translate-y-0.5 hover:shadow-md">
-                      <CardContent className="flex items-center gap-4 py-4">
-                        <div
-                          className={cn(
-                            "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-xs font-bold",
-                            estado === "vencido" && "bg-destructive/15 text-destructive animate-pulse",
-                            estado === "vence_hoy" && "bg-warning/20 text-warning-foreground",
-                            estado === "vence_pronto" && "bg-accent/20 text-accent-foreground",
-                          )}
-                        >
-                          {estado === "vencido" ? "VCDO" : estado === "vence_hoy" ? "HOY" : `${dias}d`}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold">{cliente}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {descripcion}
-                          </p>
-                          <p className="mt-0.5 text-sm font-mono tabular-nums">
-                            {formatearDOP(Number(p.monto_prestado))}
-                          </p>
-                        </div>
+      {/* Vence hoy — Inset Grouped List iOS */}
+      <FadeIn delay={0.18}>
+        <ListSection
+          title="Vence hoy o antes"
+          description={
+            venceHoy.length === 0
+              ? undefined
+              : "Toca una fila para abrir el préstamo."
+          }
+        >
+          {venceHoy.length === 0 ? (
+            <div
+              className={cn(
+                "rounded-[14px] border border-border/60 bg-card shadow-card",
+                "px-4 py-8 text-center text-[13.5px] text-muted-foreground",
+              )}
+            >
+              No hay empeños venciendo hoy.
+            </div>
+          ) : (
+            <ListGroup>
+              {venceHoy.map((p) => {
+                const dias = diasHastaVencimiento(p.fecha_vencimiento);
+                const estado = semaforoVencimiento(p.fecha_vencimiento);
+                const cliente = p.clientes?.nombre_completo ?? "Cliente";
+                const descripcion = p.articulos?.descripcion ?? "Artículo";
+                const tone =
+                  estado === "vencido"
+                    ? "red"
+                    : estado === "vence_hoy"
+                      ? "orange"
+                      : "yellow";
+                const label =
+                  estado === "vencido" ? "VCDO" : estado === "vence_hoy" ? "HOY" : `${dias}d`;
+
+                return (
+                  <ListRow
+                    key={p.id}
+                    href={`/empenos/${p.id}`}
+                    icon={
+                      <SettingsGlyph color={tone} size={32}>
+                        <span className="text-[10.5px] font-[700] tracking-[-0.005em] tabular-nums">
+                          {label}
+                        </span>
+                      </SettingsGlyph>
+                    }
+                    title={cliente}
+                    subtitle={descripcion}
+                    trailing={
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="font-[600] text-foreground tabular-nums">
+                          {formatearDOP(Number(p.monto_prestado))}
+                        </span>
                         <Badge variant="outline" className="font-mono text-[10px]">
                           {p.codigo}
                         </Badge>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                      </div>
+                    }
+                  />
+                );
+              })}
+            </ListGroup>
+          )}
+          {venceHoy.length > 0 && (
+            <div className="px-4 pt-1">
+              <Link
+                href="/empenos?filtro=vencidos"
+                className="inline-flex items-center gap-1 text-[13px] font-[510] text-primary hover:underline"
+              >
+                Ver todos <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          )}
+        </ListSection>
       </FadeIn>
-
     </div>
   );
 }
@@ -210,40 +230,34 @@ function KpiCard({
   detalle,
   icon,
   tone,
-  delay,
 }: {
   titulo: string;
   valor: React.ReactNode;
   detalle?: string;
   icon: React.ReactNode;
-  tone: "wine" | "gold" | "success" | "warning";
-  delay?: number;
+  tone: "blue" | "green" | "orange" | "gold";
 }) {
   return (
-    <FadeIn delay={delay}>
-      <Card className="relative overflow-hidden">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">{titulo}</span>
-            <span
-              className={cn(
-                "flex h-7 w-7 items-center justify-center rounded-full",
-                tone === "wine" && "bg-primary/10 text-primary",
-                tone === "gold" && "bg-accent/20 text-accent-foreground",
-                tone === "success" && "bg-success/15 text-success",
-                tone === "warning" && "bg-warning/25 text-warning-foreground",
-              )}
-            >
-              {icon}
-            </span>
-          </div>
-          <div className="mt-2 text-2xl font-bold tabular-nums md:text-3xl">
-            {valor}
-          </div>
-          {detalle && <p className="mt-1 text-xs text-muted-foreground">{detalle}</p>}
-        </CardContent>
-      </Card>
-    </FadeIn>
+    <Card className="relative overflow-hidden">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-[11.5px] font-[510] text-muted-foreground uppercase tracking-[0.04em]">
+            {titulo}
+          </span>
+          <SettingsGlyph color={tone} size={24}>
+            {icon}
+          </SettingsGlyph>
+        </div>
+        <div className="mt-2 text-[24px] md:text-[28px] font-[700] leading-tight tracking-[-0.022em] tabular-nums">
+          {valor}
+        </div>
+        {detalle && (
+          <p className="mt-0.5 text-[11.5px] text-muted-foreground tracking-[-0.005em]">
+            {detalle}
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -256,25 +270,38 @@ function AccesoRapido({
   href: string;
   titulo: string;
   descripcion: string;
-  tone: "wine" | "gold";
+  tone: "graphite" | "champagne";
 }) {
   return (
     <Link href={href} className="group">
-      <Card
+      <div
         className={cn(
-          "relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-lg",
-          tone === "wine" && "wine-gradient text-wine-foreground",
-          tone === "gold" && "gold-gradient text-gold-foreground",
+          "relative overflow-hidden rounded-[14px] shadow-elevated",
+          "border border-border/40",
+          "transition-transform duration-200 [transition-timing-function:var(--ease-ios)] group-hover:-translate-y-0.5",
+          "ring-1 ring-inset ring-white/[0.06]",
+          tone === "graphite" && "wine-gradient text-wine-foreground",
+          tone === "champagne" && "gold-gradient text-[oklch(0.2_0.04_70)]",
         )}
       >
-        <CardContent className="flex items-center justify-between p-5">
+        {/* Highlight superior interior — Apple Hardware metallic */}
+        <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
+        <div className="relative flex items-center justify-between p-5">
           <div>
-            <h3 className="text-lg font-bold">{titulo}</h3>
-            <p className="text-sm opacity-90">{descripcion}</p>
+            <h3 className="text-[17px] font-[600] tracking-[-0.022em] leading-tight">{titulo}</h3>
+            <p className="mt-0.5 text-[12.5px] opacity-80 tracking-[-0.005em]">{descripcion}</p>
           </div>
-          <ArrowRight className="h-6 w-6 transition-transform group-hover:translate-x-1" />
-        </CardContent>
-      </Card>
+          <div
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-full",
+              "bg-white/15 backdrop-blur-sm",
+              "transition-transform duration-200 [transition-timing-function:var(--ease-ios)] group-hover:translate-x-0.5",
+            )}
+          >
+            <ArrowRight className="h-4 w-4" strokeWidth={2.2} />
+          </div>
+        </div>
+      </div>
     </Link>
   );
 }

@@ -3,34 +3,77 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * Button — estilo Apple (iOS/macOS).
+ *
+ * - `default`     : filled (system blue). CTA primaria.
+ * - `tinted`      : background del primary al 14% + texto primary. La variante
+ *                   más usada en iOS para acciones secundarias destacadas.
+ * - `secondary`   : neutral fill (gray) — para acciones de menor jerarquía.
+ * - `outline`     : hairline border + fondo card. Para toolbars.
+ * - `ghost`       : sin background. Hover muy sutil. Para iconos en navbars.
+ * - `destructive` : tinted red para acciones peligrosas.
+ * - `link`/`plain`: solo texto (Apple "plain button").
+ *
+ * Press state: scale 0.97 + opacidad 0.7 (curva ease-out iOS).
+ * Focus visible: halo de 4px del color tint con offset = 0 (sistema iOS).
+ */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  [
+    "group/button inline-flex shrink-0 items-center justify-center",
+    "rounded-[10px] border border-transparent bg-clip-padding",
+    "text-[13.5px] font-[590] leading-none tracking-[-0.01em] whitespace-nowrap",
+    "transition-[transform,background-color,box-shadow,opacity] duration-150",
+    "[transition-timing-function:var(--ease-ios)]",
+    "outline-none select-none",
+    "focus-visible:ring-[4px] focus-visible:ring-ring/30 focus-visible:ring-offset-0",
+    "active:not-aria-[haspopup]:scale-[0.97] active:not-aria-[haspopup]:opacity-80",
+    "disabled:pointer-events-none disabled:opacity-40",
+    "aria-invalid:ring-[4px] aria-invalid:ring-destructive/30",
+    "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  ].join(" "),
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        default:
+          "bg-primary text-primary-foreground shadow-[0_1px_0_oklch(1_0_0/0.18)_inset,0_1px_2px_oklch(0_0_0/0.08)] hover:bg-primary/90 [a]:hover:bg-primary/90",
+        tinted:
+          "bg-primary/[0.13] text-primary hover:bg-primary/[0.18] dark:bg-primary/[0.18] dark:hover:bg-primary/[0.24]",
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-card text-foreground shadow-hairline hover:bg-secondary/60 dark:bg-card/60 dark:hover:bg-secondary/40",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary",
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "text-foreground hover:bg-secondary/70 aria-expanded:bg-secondary dark:hover:bg-secondary/50",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
+          "bg-destructive/[0.13] text-destructive hover:bg-destructive/[0.18] focus-visible:ring-destructive/30 dark:bg-destructive/[0.2] dark:hover:bg-destructive/[0.28]",
+        "destructive-filled":
+          "bg-destructive text-white shadow-[0_1px_0_oklch(1_0_0/0.18)_inset,0_1px_2px_oklch(0_0_0/0.08)] hover:bg-destructive/90 focus-visible:ring-destructive/30",
+        link:
+          "text-primary underline-offset-4 hover:underline rounded-none",
+        plain:
+          "text-primary hover:opacity-70 active:opacity-50 rounded-none",
       },
       size: {
         default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-8",
+          "h-8 gap-1.5 px-3 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
+        xs:
+          "h-6 gap-1 rounded-md px-2 text-[11.5px] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm:
+          "h-7 gap-1 rounded-lg px-2.5 text-[12.5px] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        lg:
+          "h-10 gap-2 rounded-[12px] px-4 text-[14px] has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
+        xl:
+          // Acción primaria móvil — Apple usa ~50pt de alto y rounded grande
+          "h-12 gap-2 rounded-2xl px-5 text-[15px] font-[600] has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4 [&_svg:not([class*='size-'])]:size-[18px]",
+        icon:
+          "size-8 rounded-full",
         "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
+          "size-6 rounded-md in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
         "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
+          "size-7 rounded-lg in-data-[slot=button-group]:rounded-lg",
+        "icon-lg":
+          "size-9 rounded-full",
       },
     },
     defaultVariants: {

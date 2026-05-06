@@ -86,6 +86,13 @@ interface SidebarProps {
   modulosPermitidos: string[];
 }
 
+/**
+ * Sidebar estilo macOS Finder / Mail / Notes:
+ *   - Vibrancy material (translúcido + saturate blur).
+ *   - Selección como pill tinted del primary, con motion layoutId para slide.
+ *   - Headers de sección en SF Pro semibold uppercase tracking ancho.
+ *   - Separator hairline entre logo y nav, y entre nav y logout.
+ */
 export function Sidebar({ esAdmin, modulosPermitidos }: SidebarProps) {
   const pathname = usePathname();
 
@@ -104,21 +111,40 @@ export function Sidebar({ esAdmin, modulosPermitidos }: SidebarProps) {
   }
 
   return (
-    <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 md:left-0 md:z-30 border-r bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center gap-3 px-5 py-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl wine-gradient ring-1 ring-sidebar-border shadow">
-          <span className="font-serif text-2xl font-bold text-accent">P</span>
+    <aside
+      className={cn(
+        "hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 md:left-0 md:z-30",
+        // Vibrancy macOS — el material se aplica encima de --sidebar
+        "material-chrome",
+        "border-r border-sidebar-border",
+        "text-sidebar-foreground",
+      )}
+    >
+      {/* Logo bar — emula el "traffic lights row" de macOS sin pretender ser eso */}
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-sidebar-border/60">
+        <div
+          className={cn(
+            "flex h-9 w-9 items-center justify-center rounded-[10px]",
+            "wine-gradient shadow-elevated",
+            "ring-1 ring-inset ring-white/10",
+          )}
+        >
+          <span className="font-heading text-[17px] font-[700] text-accent leading-none">P</span>
         </div>
-        <div>
-          <h1 className="text-lg font-bold leading-none tracking-tight">Don Pepe</h1>
-          <p className="text-xs text-muted-foreground">Compraventa & Oro</p>
+        <div className="min-w-0">
+          <h1 className="text-[14.5px] font-[600] leading-tight tracking-[-0.022em]">
+            Don Pepe
+          </h1>
+          <p className="text-[11.5px] text-muted-foreground tracking-[-0.005em]">
+            Compraventa & Oro
+          </p>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto px-3 pb-4">
+      <nav className="flex-1 space-y-5 overflow-y-auto px-2.5 py-3">
         {seccionesVisibles.map((section) => (
           <div key={section.titulo}>
-            <h2 className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="mb-1.5 px-2.5 text-[10.5px] font-[590] uppercase tracking-[0.06em] text-muted-foreground/80">
               {section.titulo}
             </h2>
             <ul className="space-y-0.5">
@@ -130,21 +156,23 @@ export function Sidebar({ esAdmin, modulosPermitidos }: SidebarProps) {
                     <Link
                       href={item.href}
                       className={cn(
-                        "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "relative flex items-center gap-2.5 rounded-[8px] px-2.5 py-1.5",
+                        "text-[13.5px] tracking-[-0.005em]",
+                        "transition-colors duration-150",
                         active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+                          ? "text-sidebar-accent-foreground font-[590]"
+                          : "text-sidebar-foreground/85 font-[500] hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground",
                       )}
                     >
                       {active && (
                         <motion.span
-                          layoutId="sidebar-active"
-                          className="absolute inset-y-1 left-0 w-1 rounded-r-full bg-primary"
+                          layoutId="sidebar-active-pill"
+                          className="absolute inset-0 -z-0 rounded-[8px] bg-sidebar-accent"
                           transition={{ type: "spring", stiffness: 380, damping: 32 }}
                         />
                       )}
-                      <Icon className="h-4 w-4" />
-                      {item.label}
+                      <Icon className="relative z-10 h-[15px] w-[15px]" strokeWidth={active ? 2.2 : 1.8} />
+                      <span className="relative z-10">{item.label}</span>
                     </Link>
                   </li>
                 );
@@ -154,14 +182,14 @@ export function Sidebar({ esAdmin, modulosPermitidos }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="border-t px-3 py-3">
+      <div className="border-t border-sidebar-border/60 px-2.5 py-2.5">
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-2 text-muted-foreground"
+          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
           onClick={handleLogout}
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-3.5 w-3.5" />
           Cerrar sesión
         </Button>
       </div>

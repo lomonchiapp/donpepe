@@ -131,8 +131,28 @@ export interface AppUser {
   telefono_whatsapp: string | null;
   recibir_alertas: boolean;
   activo: boolean;
+  /** Avatar URL (Storage bucket o data: URI). Opcional; si null, se renderizan iniciales. */
+  avatar_url: string | null;
+  /** Longitud del PIN del usuario (4-8, default 4). Define el keypad del lockscreen. */
+  pin_length: number;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Fila retornada por el RPC `lockscreen_users()` — versión "pública" de
+ * AppUser que se muestra en la pantalla de bloqueo (pre-auth). No incluye
+ * `modulos_permitidos` ni `auth_user_id` por privacidad.
+ */
+export interface LockscreenUser {
+  id: string;
+  nombre: string;
+  email: string;
+  avatar_url: string | null;
+  es_admin: boolean;
+  /** "Admin" | "Dueño" | "Contador" | "Empleado" — derivado server-side. */
+  rol_display: string;
+  pin_length: number;
 }
 
 export interface ConfigNegocio {
@@ -684,6 +704,8 @@ export interface Database {
       obtener_proximo_ncf: { Args: { p_tipo: TipoComprobante }; Returns: string };
       siguiente_numero: { Args: { p_scope: string }; Returns: string };
       marcar_rangos_ncf_vencidos: { Args: Record<string, never>; Returns: number };
+      lockscreen_users: { Args: Record<string, never>; Returns: LockscreenUser[] };
+      email_for_app_user: { Args: { p_user_id: string }; Returns: string | null };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

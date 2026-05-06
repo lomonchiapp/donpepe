@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { History, Plus } from "lucide-react";
+import { History, Plus, Inbox } from "lucide-react";
 
 import { FadeIn } from "@/components/motion/fade-in";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +16,7 @@ import type { EstadoPrestamo } from "@/lib/supabase/types";
 
 export const metadata = { title: "Empeños" };
 
-type Filtro = "activos" | "vence_pronto" | "vencidos" | "propiedad" | "todos";
+type Filtro = "todos" | "activos" | "vence_pronto" | "vencidos" | "propiedad";
 
 interface Props {
   searchParams: Promise<{ filtro?: Filtro }>;
@@ -71,15 +71,15 @@ async function fetchPrestamos(filtro: Filtro): Promise<Row[]> {
 }
 
 export default async function EmpenosPage({ searchParams }: Props) {
-  const { filtro = "activos" } = await searchParams;
+  const { filtro = "todos" } = await searchParams;
   const prestamos = await fetchPrestamos(filtro);
 
   const tabs: { value: Filtro; label: string }[] = [
+    { value: "todos", label: "Todos" },
     { value: "activos", label: "Activos" },
     { value: "vence_pronto", label: "Vence pronto" },
     { value: "vencidos", label: "Vencidos" },
     { value: "propiedad", label: "Propiedad casa" },
-    { value: "todos", label: "Todos" },
   ];
 
   return (
@@ -121,7 +121,13 @@ export default async function EmpenosPage({ searchParams }: Props) {
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <nav className="mb-6 flex w-full overflow-x-auto rounded-xl bg-muted/50 p-1">
+        <nav
+          className={cn(
+            "mb-6 inline-flex w-full max-w-fit items-center justify-start gap-[2px] overflow-x-auto",
+            "rounded-[10px] bg-secondary p-[2px]",
+            "shadow-[inset_0_0_0_0.5px_oklch(from_var(--foreground)_l_c_h/0.04)]",
+          )}
+        >
           {tabs.map((t) => {
             const activo = t.value === filtro;
             return (
@@ -129,10 +135,16 @@ export default async function EmpenosPage({ searchParams }: Props) {
                 key={t.value}
                 href={`/empenos?filtro=${t.value}`}
                 className={cn(
-                  "whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-colors md:text-sm",
+                  "whitespace-nowrap rounded-[8px] px-3 h-[26px] flex items-center justify-center",
+                  "text-[13px] font-[590] tracking-[-0.005em]",
+                  "transition-all duration-200 [transition-timing-function:var(--ease-ios)]",
                   activo
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? cn(
+                        "bg-card text-foreground",
+                        "shadow-[0_1px_2px_oklch(0_0_0/0.06),0_0_0_0.5px_oklch(0_0_0/0.04)]",
+                        "dark:bg-[oklch(0.32_0.005_286)] dark:shadow-[0_1px_2px_oklch(0_0_0/0.4),0_0_0_0.5px_oklch(1_0_0/0.06)]",
+                      )
+                    : "text-foreground/65 hover:text-foreground",
                 )}
               >
                 {t.label}
@@ -144,8 +156,18 @@ export default async function EmpenosPage({ searchParams }: Props) {
 
       {prestamos.length === 0 ? (
         <Card>
-          <CardContent className="py-14 text-center text-sm text-muted-foreground">
-            No hay empeños en esta vista.
+          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
+              <Inbox className="h-5 w-5 text-muted-foreground" strokeWidth={1.6} />
+            </div>
+            <div>
+              <p className="text-[14px] font-[590] tracking-[-0.014em]">
+                No hay empeños en esta vista
+              </p>
+              <p className="mt-0.5 text-[12.5px] text-muted-foreground tracking-[-0.005em]">
+                Prueba otra pestaña o registra un nuevo empeño.
+              </p>
+            </div>
           </CardContent>
         </Card>
       ) : (

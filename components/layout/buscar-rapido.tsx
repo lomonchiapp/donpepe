@@ -96,9 +96,18 @@ export function BuscarRapido() {
     return () => clearTimeout(id);
   }, [q, abierto]);
 
-  // Hotkey global "/" para abrir (si no está escribiendo).
+  // Hotkeys globales:
+  //   - "/" cuando no se está escribiendo (estilo Slack/Notion)
+  //   - "⌘K" / "Ctrl+K" siempre (estilo macOS Spotlight / Linear)
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      // ⌘K / Ctrl+K — siempre abre, incluso si está escribiendo
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        if (abierto) cerrar();
+        else abrir();
+        return;
+      }
       if (abierto) return;
       if (isEditableTarget(e.target)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -109,7 +118,7 @@ export function BuscarRapido() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [abierto, abrir]);
+  }, [abierto, abrir, cerrar]);
 
   const total = resultados.length;
 
@@ -119,15 +128,24 @@ export function BuscarRapido() {
         type="button"
         onClick={abrir}
         aria-label="Buscar"
-        className="ml-auto flex h-10 max-w-md flex-1 items-center gap-2 rounded-full border bg-muted/50 px-4 text-sm text-muted-foreground hover:bg-muted md:ml-0 md:w-80 md:flex-none"
+        className={cn(
+          "ml-auto flex h-9 max-w-md flex-1 items-center gap-2",
+          "rounded-[10px] border border-transparent bg-secondary px-3.5",
+          "text-[13.5px] tracking-[-0.005em] text-muted-foreground",
+          "transition-[background-color,box-shadow] duration-150 [transition-timing-function:var(--ease-ios)]",
+          "hover:bg-secondary/70",
+          "md:ml-0 md:w-80 md:flex-none",
+        )}
       >
         <Search className="h-4 w-4 shrink-0" />
         <span className="flex-1 truncate text-left">
           Buscar cédula, cliente o ticket…
         </span>
-        <kbd className="hidden rounded border bg-background px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground md:inline-block">
-          /
-        </kbd>
+        <span className="hidden items-center gap-1 md:inline-flex">
+          <kbd className="rounded-[5px] border border-border/60 bg-card px-1.5 py-0.5 font-sans text-[10px] font-[590] text-muted-foreground">
+            ⌘K
+          </kbd>
+        </span>
       </button>
 
       <Dialog open={abierto} onOpenChange={onOpenChange}>
@@ -140,8 +158,8 @@ export function BuscarRapido() {
             Busca clientes, empeños y piezas de joyería
           </DialogDescription>
 
-          <div className="flex items-center gap-3 border-b px-4 py-3">
-            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <div className="flex items-center gap-3 border-b border-border/60 px-4 py-3.5">
+            <Search className="h-[18px] w-[18px] shrink-0 text-muted-foreground" strokeWidth={1.8} />
             <input
               value={q}
               onChange={(e) => onChangeQ(e.target.value)}
@@ -160,13 +178,13 @@ export function BuscarRapido() {
               }}
               autoFocus
               placeholder="Cédula, cliente, ticket, pieza, SKU…"
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="flex-1 bg-transparent text-[15px] tracking-[-0.005em] outline-none placeholder:text-muted-foreground/70"
             />
             {pending && (
               <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
             )}
-            <kbd className="hidden rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline-block">
-              Esc
+            <kbd className="hidden rounded-[5px] border border-border/60 bg-secondary px-1.5 py-0.5 font-sans text-[10px] font-[590] text-muted-foreground sm:inline-block">
+              esc
             </kbd>
           </div>
 
@@ -251,24 +269,24 @@ export function BuscarRapido() {
             )}
           </div>
 
-          <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2 text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-2">
+          <div className="flex items-center justify-between border-t border-border/60 bg-secondary/40 px-4 py-2 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-3">
               <span className="flex items-center gap-1">
-                <kbd className="rounded border bg-background px-1 py-0.5 font-mono text-[10px]">
+                <kbd className="rounded-[4px] border border-border/60 bg-card px-1 py-0.5 font-sans text-[10px] font-[590]">
                   ↑↓
                 </kbd>
-                mover
+                navegar
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="rounded border bg-background px-1 py-0.5 font-mono text-[10px]">
+                <kbd className="rounded-[4px] border border-border/60 bg-card px-1 py-0.5 font-sans text-[10px] font-[590]">
                   ↵
                 </kbd>
-                ir
+                abrir
               </span>
             </span>
-            <span>
+            <span className="font-[510]">
               {total > 0 &&
-                `${total} resultado${total === 1 ? "" : "s"}`}
+                `${total} ${total === 1 ? "resultado" : "resultados"}`}
             </span>
           </div>
         </DialogContent>

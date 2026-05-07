@@ -14,8 +14,19 @@ import { cn } from "@/lib/utils";
  *  - Vibrancy material chrome (translúcido + saturate blur).
  *  - Hairline bottom 0.5px.
  *  - Iconos circulares plain estilo iOS.
+ *
+ * `alertasCount` viene del layout (server component) — número de empeños
+ * vencidos + próximos a vencer en los siguientes 7 días.
+ * `alertasUrgentes` true si hay vencidos (renderiza el badge en rojo
+ * destructive). Si solo hay próximos, badge en naranja warning.
  */
-export function TopBar() {
+export function TopBar({
+  alertasCount = 0,
+  alertasUrgentes = false,
+}: {
+  alertasCount?: number;
+  alertasUrgentes?: boolean;
+}) {
   return (
     <header
       className={cn(
@@ -39,19 +50,34 @@ export function TopBar() {
         <div className="ml-auto flex items-center gap-1">
           <Link
             href="/alertas"
-            aria-label="Alertas"
+            aria-label={
+              alertasCount === 0
+                ? "Alertas"
+                : `Alertas — ${alertasCount} ${alertasCount === 1 ? "pendiente" : "pendientes"}`
+            }
             className={cn(
               buttonVariants({ variant: "ghost", size: "icon" }),
               "relative",
             )}
           >
             <Bell className="h-[18px] w-[18px]" strokeWidth={1.8} />
-            <span
-              className={cn(
-                "absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive",
-                "ring-2 ring-[var(--material-chrome)]",
-              )}
-            />
+            {alertasCount > 0 && (
+              <span
+                className={cn(
+                  "absolute -right-0.5 -top-0.5",
+                  "min-w-[18px] h-[18px] px-1 rounded-full",
+                  "flex items-center justify-center",
+                  "text-[10px] font-[700] text-white tabular-nums leading-none",
+                  alertasUrgentes ? "bg-destructive" : "bg-warning",
+                  "ring-[2px] ring-[var(--material-chrome)]",
+                  "shadow-[0_0_0_0.5px_oklch(0_0_0/0.08)]",
+                  // Mini bounce-in apenas se carga
+                  "animate-in fade-in zoom-in-50 duration-300 [animation-timing-function:var(--ease-ios)]",
+                )}
+              >
+                {alertasCount > 99 ? "99+" : alertasCount}
+              </span>
+            )}
           </Link>
 
           <ThemeToggle />

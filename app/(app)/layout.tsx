@@ -28,6 +28,29 @@ export default async function AppLayout({
   const esAdmin = me?.es_admin ?? false;
   const modulosPermitidos = me?.modulos_permitidos ?? [];
 
+  // Conteo de alertas activas — se muestra como badge en el bell del TopBar.
+  // Suma vencidos + próximos a vencer (≤ 7 días). Si la consulta falla,
+  // mostramos 0 (no es crítico para el render).
+  const hoyISO = new Date().toISOString().slice(0, 10);
+  const en7 = new Date();
+  en7.setDate(en7.getDate() + 7);
+  const en7ISO = en7.toISOString().slice(0, 10);
+  const [{ count: alertasVencidas }, { count: alertasProximas }] = await Promise.all([
+    supabase
+      .from("prestamos")
+      .select("id", { count: "exact", head: true })
+      .in("estado", ["activo", "vencido_a_cobro"])
+      .lt("fecha_vencimiento", hoyISO),
+    supabase
+      .from("prestamos")
+      .select("id", { count: "exact", head: true })
+      .eq("estado", "activo")
+      .gte("fecha_vencimiento", hoyISO)
+      .lte("fecha_vencimiento", en7ISO),
+  ]);
+  const alertasCount = (alertasVencidas ?? 0) + (alertasProximas ?? 0);
+  const alertasUrgentes = (alertasVencidas ?? 0) > 0;
+
   // Enforcement a nivel URL: si el usuario escribe /empenos directo en el
   // navegador y no tiene el módulo habilitado, lo mandamos a /sin-permiso.
   // Admin pasa derecho. Whitelist: /sin-permiso (la propia página de error) y
@@ -63,7 +86,7 @@ export default async function AppLayout({
     <div className="flex min-h-dvh w-full">
       <Sidebar esAdmin={esAdmin} modulosPermitidos={modulosPermitidos} />
       <div className="flex min-h-dvh w-full flex-col md:pl-64">
-        <TopBar />
+        <TopBar alertasCount={alertasCount} alertasUrgentes={alertasUrgentes} />
         <main className="flex-1 pb-24 md:pb-8">{children}</main>
         <BottomNav esAdmin={esAdmin} modulosPermitidos={modulosPermitidos} />
         <Fab />
